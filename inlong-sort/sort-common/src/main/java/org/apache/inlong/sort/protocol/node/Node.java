@@ -17,18 +17,20 @@
 
 package org.apache.inlong.sort.protocol.node;
 
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonInclude;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonInclude.Include;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonSubTypes;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.inlong.sort.protocol.FieldInfo;
+import org.apache.inlong.sort.protocol.node.extract.KafkaExtractNode;
 import org.apache.inlong.sort.protocol.node.extract.MySqlExtractNode;
+import org.apache.inlong.sort.protocol.node.load.HiveLoadNode;
 import org.apache.inlong.sort.protocol.node.load.KafkaLoadNode;
+import org.apache.inlong.sort.protocol.node.transform.DistinctNode;
 import org.apache.inlong.sort.protocol.node.transform.TransformNode;
-
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
@@ -36,8 +38,11 @@ import java.util.TreeMap;
         property = "type")
 @JsonSubTypes({
         @JsonSubTypes.Type(value = MySqlExtractNode.class, name = "mysqlExtract"),
+        @JsonSubTypes.Type(value = KafkaExtractNode.class, name = "kafkaExtract"),
         @JsonSubTypes.Type(value = TransformNode.class, name = "baseTransform"),
-        @JsonSubTypes.Type(value = KafkaLoadNode.class, name = "kafkaLoad")
+        @JsonSubTypes.Type(value = KafkaLoadNode.class, name = "kafkaLoad"),
+        @JsonSubTypes.Type(value = DistinctNode.class, name = "distinct"),
+        @JsonSubTypes.Type(value = HiveLoadNode.class, name = "hiveLoad")
 })
 public interface Node {
 

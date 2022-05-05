@@ -23,6 +23,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.inlong.manager.common.enums.FieldType;
+import org.apache.inlong.manager.common.enums.MetaFieldType;
 
 @Data
 @NoArgsConstructor
@@ -30,7 +31,8 @@ import org.apache.inlong.manager.common.enums.FieldType;
 @ApiModel("Stream field configuration")
 public class StreamField {
 
-    public static final StreamField PROCESSING_TIME = new StreamField(100, FieldType.BIGINT, "PROCESSING_TIME",
+    public static final StreamField PROCESSING_TIME = new StreamField(100, FieldType.BIGINT,
+            MetaFieldType.PROCESSING_TIME.getName(),
             null, null, 1);
 
     public StreamField(int index, FieldType fieldType, String fieldName, String fieldComment, String fieldValue) {
@@ -45,6 +47,21 @@ public class StreamField {
             Integer isMetaField) {
         this(index, fieldType, fieldName, fieldComment, fieldValue);
         this.isMetaField = isMetaField;
+    }
+
+    public StreamField(int index, FieldType fieldType, String fieldName, String fieldComment, String fieldValue,
+            Integer isMetaField, String originNodeName) {
+        this(index, fieldType, fieldName, fieldComment, fieldValue);
+        this.isMetaField = isMetaField;
+        this.originNodeName = originNodeName;
+    }
+
+    public StreamField(int index, FieldType fieldType, String fieldName, String fieldComment, String fieldValue,
+            Integer isMetaField, String originNodeName, String originFieldName) {
+        this(index, fieldType, fieldName, fieldComment, fieldValue);
+        this.isMetaField = isMetaField;
+        this.originNodeName = originNodeName;
+        this.originFieldName = originFieldName;
     }
 
     @ApiModelProperty("Field index")
@@ -68,5 +85,11 @@ public class StreamField {
     @ApiModelProperty("Field format, including: MICROSECONDS, MILLISECONDS, SECONDS, SQL, ISO_8601"
             + " and custom such as 'yyyy-MM-dd HH:mm:ss'. This is mainly used for time format")
     private String fieldFormat;
+
+    @ApiModelProperty("Origin Node name which stream field belongs")
+    private String originNodeName;
+
+    @ApiModelProperty("Origin field name before transform operation")
+    private String originFieldName;
 
 }

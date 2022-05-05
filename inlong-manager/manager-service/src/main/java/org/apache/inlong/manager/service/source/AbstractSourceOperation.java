@@ -20,8 +20,9 @@ package org.apache.inlong.manager.service.source;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.inlong.manager.common.enums.ErrorCodeEnum;
-import org.apache.inlong.manager.common.enums.GroupState;
-import org.apache.inlong.manager.common.enums.SourceState;
+import org.apache.inlong.manager.common.enums.GlobalConstants;
+import org.apache.inlong.manager.common.enums.GroupStatus;
+import org.apache.inlong.manager.common.enums.SourceStatus;
 import org.apache.inlong.manager.common.exceptions.BusinessException;
 import org.apache.inlong.manager.common.pojo.source.SourceRequest;
 import org.apache.inlong.manager.common.pojo.source.SourceResponse;
@@ -91,17 +92,17 @@ public abstract class AbstractSourceOperation implements StreamSourceOperation {
 
         StreamSourceEntity entity = CommonBeanUtils.copyProperties(request, StreamSourceEntity::new);
         entity.setVersion(1);
-        if (GroupState.forCode(groupStatus).equals(GroupState.CONFIG_SUCCESSFUL)) {
-            entity.setStatus(SourceState.TO_BE_ISSUED_ADD.getCode());
+        if (GroupStatus.forCode(groupStatus).equals(GroupStatus.CONFIG_SUCCESSFUL)) {
+            entity.setStatus(SourceStatus.TO_BE_ISSUED_ADD.getCode());
         } else {
-            entity.setStatus(SourceState.SOURCE_NEW.getCode());
+            entity.setStatus(SourceStatus.SOURCE_NEW.getCode());
         }
         entity.setCreator(operator);
         entity.setModifier(operator);
         Date now = new Date();
         entity.setCreateTime(now);
         entity.setModifyTime(now);
-        entity.setIsDeleted(0);
+        entity.setIsDeleted(GlobalConstants.UN_DELETED);
         // get the ext params
         setTargetEntity(request, entity);
         sourceMapper.insert(entity);
@@ -131,7 +132,7 @@ public abstract class AbstractSourceOperation implements StreamSourceOperation {
     public void updateOpt(SourceRequest request, Integer groupStatus, String operator) {
         StreamSourceEntity entity = sourceMapper.selectByIdForUpdate(request.getId());
         Preconditions.checkNotNull(entity, ErrorCodeEnum.SOURCE_INFO_NOT_FOUND.getMessage());
-        if (!SourceState.ALLOWED_UPDATE.contains(entity.getStatus())) {
+        if (!SourceStatus.ALLOWED_UPDATE.contains(entity.getStatus())) {
             throw new BusinessException(String.format("Source=%s is not allowed to update, "
                     + "please wait until its changed to final status or stop / frozen / delete it firstly", entity));
         }
@@ -149,9 +150,9 @@ public abstract class AbstractSourceOperation implements StreamSourceOperation {
     @Transactional(rollbackFor = Throwable.class, isolation = Isolation.REPEATABLE_READ)
     public void stopOpt(SourceRequest request, String operator) {
         StreamSourceEntity existEntity = sourceMapper.selectByIdForUpdate(request.getId());
-        SourceState curState = SourceState.forCode(existEntity.getStatus());
-        SourceState nextState = SourceState.TO_BE_ISSUED_FROZEN;
-        if (!SourceState.isAllowedTransition(curState, nextState)) {
+        SourceStatus curState = SourceStatus.forCode(existEntity.getStatus());
+        SourceStatus nextState = SourceStatus.TO_BE_ISSUED_FROZEN;
+        if (!SourceStatus.isAllowedTransition(curState, nextState)) {
             throw new BusinessException(String.format("Source=%s is not allowed to stop", existEntity));
         }
         StreamSourceEntity curEntity = CommonBeanUtils.copyProperties(request, StreamSourceEntity::new);
@@ -166,9 +167,9 @@ public abstract class AbstractSourceOperation implements StreamSourceOperation {
     @Transactional(rollbackFor = Throwable.class, isolation = Isolation.REPEATABLE_READ)
     public void restartOpt(SourceRequest request, String operator) {
         StreamSourceEntity existEntity = sourceMapper.selectByIdForUpdate(request.getId());
-        SourceState curState = SourceState.forCode(existEntity.getStatus());
-        SourceState nextState = SourceState.TO_BE_ISSUED_ACTIVE;
-        if (!SourceState.isAllowedTransition(curState, nextState)) {
+        SourceStatus curState = SourceStatus.forCode(existEntity.getStatus());
+        SourceStatus nextState = SourceStatus.TO_BE_ISSUED_ACTIVE;
+        if (!SourceStatus.isAllowedTransition(curState, nextState)) {
             throw new BusinessException(String.format("Source=%s is not allowed to restart", existEntity));
         }
         StreamSourceEntity curEntity = CommonBeanUtils.copyProperties(request, StreamSourceEntity::new);
@@ -185,14 +186,14 @@ public abstract class AbstractSourceOperation implements StreamSourceOperation {
     public void deleteOpt(SourceRequest request, String operator) {
         Integer id = request.getId();
         StreamSourceEntity existEntity = sourceMapper.selectByIdForUpdate(id);
-        SourceState curState = SourceState.forCode(existEntity.getStatus());
-        SourceState nextState = SourceState.TO_BE_ISSUED_DELETE;
+        SourceStatus curState = SourceStatus.forCode(existEntity.getStatus());
+        SourceStatus nextState = SourceStatus.TO_BE_ISSUED_DELETE;
         // if source is frozen|failed|new , delete directly
-        if (curState == SourceState.SOURCE_FROZEN || curState == SourceState.SOURCE_FAILED
-                || curState == SourceState.SOURCE_NEW) {
-            nextState = SourceState.SOURCE_DISABLE;
+        if (curState == SourceStatus.SOURCE_FROZEN || curState == SourceStatus.SOURCE_FAILED
+                || curState == SourceStatus.SOURCE_NEW) {
+            nextState = SourceStatus.SOURCE_DISABLE;
         }
-        if (!SourceState.isAllowedTransition(curState, nextState)) {
+        if (!SourceStatus.isAllowedTransition(curState, nextState)) {
             throw new BusinessException(String.format("Source=%s is not allowed to delete", existEntity));
         }
         StreamSourceEntity curEntity = CommonBeanUtils.copyProperties(request, StreamSourceEntity::new);
@@ -221,7 +222,7 @@ public abstract class AbstractSourceOperation implements StreamSourceOperation {
     }
 
     private void saveFieldOpt(StreamSourceEntity entity, List<InlongStreamFieldInfo> fieldInfos) {
-        LOGGER.info("begin to save field={}", fieldInfos);
+        LOGGER.info("begin to save source field={}", fieldInfos);
         if (CollectionUtils.isEmpty(fieldInfos)) {
             return;
         }
@@ -242,6 +243,7 @@ public abstract class AbstractSourceOperation implements StreamSourceOperation {
             fieldEntity.setInlongStreamId(streamId);
             fieldEntity.setSourceId(sourceId);
             fieldEntity.setSourceType(sourceType);
+            fieldEntity.setIsDeleted(GlobalConstants.UN_DELETED);
             entityList.add(fieldEntity);
         }
 

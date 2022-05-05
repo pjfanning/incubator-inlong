@@ -19,32 +19,27 @@ package org.apache.inlong.sort.protocol.transformation.function;
 
 import org.apache.inlong.sort.formats.common.TimestampFormatInfo;
 import org.apache.inlong.sort.protocol.FieldInfo;
-import org.apache.inlong.sort.protocol.transformation.ConstantParam;
 import org.apache.inlong.sort.protocol.transformation.Function;
+import org.apache.inlong.sort.protocol.transformation.FunctionBaseTest;
+import org.apache.inlong.sort.protocol.transformation.StringConstantParam;
 import org.apache.inlong.sort.protocol.transformation.operator.EmptyOperator;
 import org.apache.inlong.sort.protocol.transformation.operator.EqualOperator;
 
+/**
+ * Test for {@link SingleValueFilterFunction}
+ */
 public class SingleValueFilterFunctionTest extends FunctionBaseTest {
 
     @Override
-    public Function getFunction() {
+    public Function getTestObject() {
         return new SingleValueFilterFunction(EmptyOperator.getInstance(),
                 new FieldInfo("single_value_field", new TimestampFormatInfo()),
                 EqualOperator.getInstance(),
-                new ConstantParam("'123'"));
+                new StringConstantParam("123"));
     }
 
     @Override
     public String getExpectFormat() {
         return " `single_value_field` = '123'";
-    }
-
-    @Override
-    public String getExpectSerializeStr() {
-        return "{\"type\":\"singleValueFilter\",\"logicOperator\":{\"type\":\"empty\"},"
-                + "\"source\":{\"type\":\"base\",\"name\":\"single_value_field\","
-                + "\"formatInfo\":{\"type\":\"timestamp\",\"format\":\"yyyy-MM-dd HH:mm:ss\"}},"
-                + "\"compareOperator\":{\"type\":\"equal\"},\"target\":{\"type\":\"constant\",\"value\":\"'123'\"}}";
-
     }
 }

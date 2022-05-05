@@ -17,7 +17,7 @@
 
 package org.apache.inlong.manager.service.core.sink;
 
-import org.apache.inlong.manager.common.enums.Constant;
+import org.apache.inlong.manager.common.enums.GlobalConstants;
 import org.apache.inlong.manager.common.enums.SinkType;
 import org.apache.inlong.manager.common.pojo.sink.SinkResponse;
 import org.apache.inlong.manager.common.pojo.sink.hive.HiveSinkRequest;
@@ -37,7 +37,7 @@ public class HiveStreamSinkServiceTest extends ServiceBaseTest {
 
     private final String globalGroupId = "b_group1";
     private final String globalStreamId = "stream1";
-    private final String globalOperator = "test_user";
+    private final String globalOperator = "admin";
     private final String sinkName = "default";
 
     @Autowired
@@ -52,7 +52,7 @@ public class HiveStreamSinkServiceTest extends ServiceBaseTest {
         sinkInfo.setInlongGroupId(globalGroupId);
         sinkInfo.setInlongStreamId(globalStreamId);
         sinkInfo.setSinkType(SinkType.SINK_HIVE);
-        sinkInfo.setEnableCreateResource(Constant.DISABLE_CREATE_RESOURCE);
+        sinkInfo.setEnableCreateResource(GlobalConstants.DISABLE_CREATE_RESOURCE);
         sinkInfo.setSinkName(sinkName);
         return sinkService.save(sinkInfo, globalOperator);
     }
@@ -83,7 +83,7 @@ public class HiveStreamSinkServiceTest extends ServiceBaseTest {
         Assert.assertEquals(globalGroupId, response.getInlongGroupId());
 
         HiveSinkResponse hiveResponse = (HiveSinkResponse) response;
-        hiveResponse.setEnableCreateResource(Constant.DISABLE_CREATE_RESOURCE);
+        hiveResponse.setEnableCreateResource(GlobalConstants.DISABLE_CREATE_RESOURCE);
 
         HiveSinkRequest request = CommonBeanUtils.copyProperties(hiveResponse, HiveSinkRequest::new);
         boolean result = sinkService.update(request, globalOperator);

@@ -27,6 +27,7 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonPro
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonSubTypes;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.inlong.sort.protocol.FieldInfo;
+import org.apache.inlong.sort.protocol.node.load.HiveLoadNode;
 import org.apache.inlong.sort.protocol.node.load.KafkaLoadNode;
 import org.apache.inlong.sort.protocol.transformation.FieldRelationShip;
 import org.apache.inlong.sort.protocol.transformation.FilterFunction;
@@ -41,7 +42,8 @@ import java.util.Map;
         include = JsonTypeInfo.As.PROPERTY,
         property = "type")
 @JsonSubTypes({
-        @JsonSubTypes.Type(value = KafkaLoadNode.class, name = "kafkaLoad")
+        @JsonSubTypes.Type(value = KafkaLoadNode.class, name = "kafkaLoad"),
+        @JsonSubTypes.Type(value = HiveLoadNode.class, name = "hiveLoad")
 })
 @NoArgsConstructor
 @Data
@@ -87,5 +89,4 @@ public abstract class LoadNode implements Node {
         this.sinkParallelism = sinkParallelism;
         this.properties = properties;
     }
-
 }

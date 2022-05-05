@@ -17,30 +17,30 @@
 
 package org.apache.inlong.sort.protocol.transformation;
 
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.inlong.sort.SerializeBaseTest;
 import org.apache.inlong.sort.protocol.transformation.TimeUnitConstantParam.TimeUnit;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class TimeUnitConstantParamTest {
+/**
+ * Test for {@link TimeUnitConstantParam}
+ */
+public class TimeUnitConstantParamTest extends SerializeBaseTest<TimeUnitConstantParam> {
 
-    @Test
-    public void testSerialize() throws JsonProcessingException {
-        TimeUnitConstantParam constantParam = new TimeUnitConstantParam(TimeUnit.HOUR);
-        ObjectMapper objectMapper = new ObjectMapper();
-        String expected = "{\"type\":\"timeUnitConstant\",\"timeUnit\":\"HOUR\",\"value\":\"HOUR\"}";
-        assertEquals(expected, objectMapper.writeValueAsString(constantParam));
+    @Override
+    public TimeUnitConstantParam getTestObject() {
+        return new TimeUnitConstantParam(TimeUnit.HOUR);
     }
 
+    /**
+     * Test for format
+     *
+     * @see TimeUnitConstantParam#format()
+     */
     @Test
-    public void testDeserialize() throws JsonProcessingException {
-        TimeUnitConstantParam constantParam = new TimeUnitConstantParam(TimeUnit.HOUR);
-        ObjectMapper objectMapper = new ObjectMapper();
-        String constantParamStr = "{\"type\":\"timeUnitConstant\",\"timeUnit\":\"HOUR\",\"value\":\"HOUR\"}";
-        TimeUnitConstantParam expected = objectMapper.readValue(constantParamStr, TimeUnitConstantParam.class);
-        assertEquals(expected, constantParam);
+    public void testFormat() {
+        assertEquals("HOUR", getTestObject().format());
     }
 
 }

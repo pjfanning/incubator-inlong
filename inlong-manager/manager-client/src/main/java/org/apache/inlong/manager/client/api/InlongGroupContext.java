@@ -23,11 +23,12 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
-import org.apache.inlong.manager.client.api.StreamSource.State;
+import org.apache.inlong.manager.common.pojo.stream.StreamSource;
+import org.apache.inlong.manager.common.pojo.stream.StreamSource.State;
 import org.apache.inlong.manager.client.api.inner.InnerGroupContext;
 import org.apache.inlong.manager.client.api.util.AssertUtil;
 import org.apache.inlong.manager.client.api.util.GsonUtil;
-import org.apache.inlong.manager.common.enums.GroupState;
+import org.apache.inlong.manager.common.enums.GroupStatus;
 import org.apache.inlong.manager.common.pojo.group.InlongGroupExtInfo;
 import org.apache.inlong.manager.common.pojo.group.InlongGroupInfo;
 
@@ -149,9 +150,9 @@ public class InlongGroupContext implements Serializable {
         // Reference to  org.apache.inlong.manager.common.enums.GroupState code
         public static InlongGroupState parseByBizStatus(int bizCode) {
 
-            GroupState groupState = GroupState.forCode(bizCode);
+            GroupStatus groupStatus = GroupStatus.forCode(bizCode);
 
-            switch (groupState) {
+            switch (groupStatus) {
                 case DRAFT:
                 case TO_BE_SUBMIT:
                     return CREATE;

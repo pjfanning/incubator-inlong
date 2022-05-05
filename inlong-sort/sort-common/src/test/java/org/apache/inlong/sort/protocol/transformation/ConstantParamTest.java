@@ -17,28 +17,28 @@
 
 package org.apache.inlong.sort.protocol.transformation;
 
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.inlong.sort.SerializeBaseTest;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
-public class ConstantParamTest {
+/**
+ * Test for {@link ConstantParam}
+ */
+public class ConstantParamTest extends SerializeBaseTest<ConstantParam> {
 
-    @Test
-    public void testSerialize() throws JsonProcessingException {
-        ConstantParam constantParam = new ConstantParam("constantparam");
-        ObjectMapper objectMapper = new ObjectMapper();
-        String expected = "{\"type\":\"constant\",\"value\":\"constantparam\"}";
-        assertEquals(expected, objectMapper.writeValueAsString(constantParam));
+    @Override
+    public ConstantParam getTestObject() {
+        return new ConstantParam("constantparam");
     }
 
+    /**
+     * Test for format
+     *
+     * @see ConstantParam#format()
+     */
     @Test
-    public void testDeserialize() throws JsonProcessingException {
-        ConstantParam constantParam = new ConstantParam("constantparam");
-        ObjectMapper objectMapper = new ObjectMapper();
-        String constantParamStr = "{\"type\":\"constant\",\"value\":\"constantparam\"}";
-        ConstantParam expected = objectMapper.readValue(constantParamStr, ConstantParam.class);
-        assertEquals(expected, constantParam);
+    public void testFormat() {
+        assertEquals("constantparam", getTestObject().format());
     }
 }

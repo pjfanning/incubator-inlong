@@ -22,8 +22,10 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.inlong.manager.common.enums.EntityStatus;
 import org.apache.inlong.manager.common.enums.ErrorCodeEnum;
+import org.apache.inlong.manager.common.enums.GlobalConstants;
+import org.apache.inlong.manager.common.enums.GroupStatus;
+import org.apache.inlong.manager.common.enums.StreamStatus;
 import org.apache.inlong.manager.common.exceptions.BusinessException;
 import org.apache.inlong.manager.common.pojo.sink.SinkBriefResponse;
 import org.apache.inlong.manager.common.pojo.sink.SinkRequest;
@@ -61,7 +63,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -107,7 +111,7 @@ public class InlongStreamServiceImpl implements InlongStreamService {
         }
         // Processing inlong stream
         InlongStreamEntity streamEntity = CommonBeanUtils.copyProperties(request, InlongStreamEntity::new);
-        streamEntity.setStatus(EntityStatus.STREAM_NEW.getCode());
+        streamEntity.setStatus(StreamStatus.NEW.getCode());
         streamEntity.setCreator(operator);
         streamEntity.setCreateTime(new Date());
 
@@ -136,6 +140,25 @@ public class InlongStreamServiceImpl implements InlongStreamService {
 
         LOGGER.info("success to get inlong stream for groupId={}", groupId);
         return response;
+    }
+
+    @Override
+    public List<InlongStreamInfo> list(String groupId) {
+        LOGGER.debug("begin to list inlong streams by groupId={}", groupId);
+        List<InlongStreamEntity> inlongStreamEntityList = streamMapper.selectByGroupId(groupId);
+        List<InlongStreamInfo> streamList = CommonBeanUtils.copyListProperties(inlongStreamEntityList,
+                InlongStreamInfo::new);
+        List<InlongStreamFieldInfo> streamFields = this.getStreamFields(groupId, null);
+        Map<String, List<InlongStreamFieldInfo>> streamFieldMap = streamFields.stream().collect(
+                Collectors.groupingBy(InlongStreamFieldInfo::getInlongStreamId,
+                        HashMap::new,
+                        Collectors.toCollection(ArrayList::new)));
+        streamList.stream().forEach(streamInfo -> {
+            String streamId = streamInfo.getInlongStreamId();
+            List<InlongStreamFieldInfo> fieldInfos = streamFieldMap.get(streamId);
+            streamInfo.setFieldList(fieldInfos);
+        });
+        return streamList;
     }
 
     @Override
@@ -217,7 +240,7 @@ public class InlongStreamServiceImpl implements InlongStreamService {
 
         CommonBeanUtils.copyProperties(request, streamEntity, true);
         streamEntity.setModifier(operator);
-        streamEntity.setStatus(EntityStatus.GROUP_CONFIG_ING.getCode());
+        streamEntity.setStatus(GroupStatus.CONFIG_ING.getCode());
         streamMapper.updateByIdentifierSelective(streamEntity);
 
         // Update field information
@@ -482,7 +505,7 @@ public class InlongStreamServiceImpl implements InlongStreamService {
             groupId = info.getInlongGroupId(); // these groupIds are all the same
             streamEntity.setInlongGroupId(groupId);
             streamEntity.setInlongStreamId(info.getInlongStreamId());
-            streamEntity.setStatus(EntityStatus.STREAM_CONFIG_ING.getCode());
+            streamEntity.setStatus(StreamStatus.CONFIG_ING.getCode());
             streamMapper.updateByIdentifierSelective(streamEntity);
 
             // Modify the sink info after approve, such as update cluster info
@@ -519,8 +542,8 @@ public class InlongStreamServiceImpl implements InlongStreamService {
         streamEntity.setPeakRecords(1000);
         streamEntity.setMaxLength(1000);
 
-        streamEntity.setStatus(EntityStatus.STREAM_CONFIG_SUCCESSFUL.getCode());
-        streamEntity.setIsDeleted(EntityStatus.UN_DELETED.getCode());
+        streamEntity.setStatus(StreamStatus.CONFIG_SUCCESSFUL.getCode());
+        streamEntity.setIsDeleted(GlobalConstants.UN_DELETED);
         streamEntity.setCreator(operator);
         streamEntity.setModifier(operator);
         Date now = new Date();
@@ -564,6 +587,7 @@ public class InlongStreamServiceImpl implements InlongStreamService {
         for (InlongStreamFieldEntity entity : list) {
             entity.setInlongGroupId(groupId);
             entity.setInlongStreamId(streamId);
+            entity.setIsDeleted(GlobalConstants.UN_DELETED);
         }
         streamFieldMapper.insertAll(list);
     }
@@ -575,15 +599,16 @@ public class InlongStreamServiceImpl implements InlongStreamService {
      * @return usiness entity for caller reuse
      */
     private InlongGroupEntity checkBizIsTempStatus(String groupId) {
-        InlongGroupEntity inlongGroupEntity = groupMapper.selectByGroupId(groupId);
-        Preconditions.checkNotNull(inlongGroupEntity, "groupId is invalid");
+        InlongGroupEntity entity = groupMapper.selectByGroupId(groupId);
+        Preconditions.checkNotNull(entity, "groupId is invalid");
         // Add/modify/delete is not allowed under certain inlong group status
-        if (EntityStatus.GROUP_TEMP_STATUS.contains(inlongGroupEntity.getStatus())) {
+        GroupStatus curState = GroupStatus.forCode(entity.getStatus());
+        if (GroupStatus.isTempStatus(curState)) {
             LOGGER.error("inlong group status was not allowed to add/update/delete inlong stream");
             throw new BusinessException(ErrorCodeEnum.STREAM_OPT_NOT_ALLOWED);
         }
 
-        return inlongGroupEntity;
+        return entity;
     }
 
     /**
@@ -599,16 +624,16 @@ public class InlongStreamServiceImpl implements InlongStreamService {
         }
 
         // Fields that are not allowed to be modified when the inlong group [configuration is successful]
-        if (EntityStatus.GROUP_CONFIG_SUCCESSFUL.getCode().equals(groupStatus)) {
+        if (GroupStatus.CONFIG_SUCCESSFUL.getCode().equals(groupStatus)) {
             checkUpdatedFields(streamEntity, request);
         }
 
         // Inlong group [Waiting to submit] [Approval rejected] [Configuration failed], if there is a
         // stream source/stream sink, the fields that are not allowed to be modified
         List<Integer> statusList = Arrays.asList(
-                EntityStatus.GROUP_WAIT_SUBMIT.getCode(),
-                EntityStatus.GROUP_APPROVE_REJECTED.getCode(),
-                EntityStatus.GROUP_CONFIG_FAILED.getCode());
+                GroupStatus.TO_BE_SUBMIT.getCode(),
+                GroupStatus.APPROVE_REJECTED.getCode(),
+                GroupStatus.CONFIG_FAILED.getCode());
         if (statusList.contains(groupStatus)) {
             String groupId = request.getInlongGroupId();
             String streamId = request.getInlongStreamId();

@@ -27,6 +27,8 @@ public enum ErrorCodeEnum {
     GROUP_ID_IS_EMPTY(102, "Inlong group id is empty"),
     STREAM_ID_IS_EMPTY(103, "Inlong stream id is empty"),
     REQUEST_IS_EMPTY(104, "Request is empty"),
+    REQUEST_COMPONENT_EMPTY(105, "Component is empty"),
+    REQUEST_INSTANCE_EMPTY(106, "Instance is empty"),
     USER_IS_NOT_MANAGER(110, "%s is not the manager, please contact %s"),
 
     GROUP_NOT_FOUND(1001, "Inlong group does not exist/no operation authority"),
@@ -41,6 +43,7 @@ public enum ErrorCodeEnum {
             "The current inlong group status does not support modifying the middleware type"),
     GROUP_NAME_UPDATE_NOT_ALLOWED(1012, "The current inlong group status does not support modifying the name"),
     GROUP_INFO_INCONSISTENT(1013, "The inlong group info is inconsistent, please contact the administrator"),
+    GROUP_MODE_UNSUPPORTED(1014, "The current inlong group mode only support light, normal"),
 
     OPT_NOT_ALLOWED_BY_STATUS(1021,
             "The current inlong group status does not allow adding/modifying/deleting related info"),

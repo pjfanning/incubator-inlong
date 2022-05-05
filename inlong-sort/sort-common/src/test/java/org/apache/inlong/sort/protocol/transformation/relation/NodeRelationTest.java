@@ -17,30 +17,17 @@
 
 package org.apache.inlong.sort.protocol.transformation.relation;
 
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Test;
+import org.apache.inlong.sort.SerializeBaseTest;
 
 import java.util.Arrays;
-import static org.junit.Assert.assertEquals;
 
-public class NodeRelationTest {
+/**
+ * Tests for {@link NodeRelationShip}
+ */
+public class NodeRelationTest extends SerializeBaseTest<NodeRelationShip> {
 
-    @Test
-    public void testSerialize() throws JsonProcessingException {
-        NodeRelationShip relationShip = new NodeRelationShip(Arrays.asList("1", "2"), Arrays.asList("3", "4"));
-        ObjectMapper objectMapper = new ObjectMapper();
-        String expected = "{\"type\":\"baseRelation\",\"inputs\":[\"1\",\"2\"],\"outputs\":[\"3\",\"4\"]}";
-        assertEquals(expected, objectMapper.writeValueAsString(relationShip));
+    @Override
+    public NodeRelationShip getTestObject() {
+        return new NodeRelationShip(Arrays.asList("1", "2"), Arrays.asList("3", "4"));
     }
-
-    @Test
-    public void testDeserialize() throws JsonProcessingException {
-        NodeRelationShip relationShip = new NodeRelationShip(Arrays.asList("1", "2"), Arrays.asList("3", "4"));
-        ObjectMapper objectMapper = new ObjectMapper();
-        String relationShipStr = "{\"type\":\"baseRelation\",\"inputs\":[\"1\",\"2\"],\"outputs\":[\"3\",\"4\"]}";
-        NodeRelationShip expected = objectMapper.readValue(relationShipStr, NodeRelationShip.class);
-        assertEquals(expected, relationShip);
-    }
-
 }
