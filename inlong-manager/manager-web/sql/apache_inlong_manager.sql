@@ -115,6 +115,7 @@ CREATE TABLE `inlong_cluster`
     `type`        varchar(20)       DEFAULT '' COMMENT 'Cluster type, such as: TUBE, PULSAR, DATA_PROXY, etc',
     `url`         varchar(512)      DEFAULT NULL COMMENT 'Cluster URL',
     `cluster_tag` varchar(128)      DEFAULT NULL COMMENT 'Cluster tag, the same tab indicates that cluster belongs to the same set',
+    `ext_tag`     varchar(128)      DEFAULT NULL COMMENT 'Extension tag, for extended use',
     `ext_params`  text              DEFAULT NULL COMMENT 'Extended params, will saved as JSON string',
     `heartbeat`   text              DEFAULT NULL COMMENT 'Cluster heartbeat info',
     `in_charges`  varchar(512) NOT NULL COMMENT 'Name of responsible person, separated by commas',
@@ -151,6 +152,31 @@ CREATE TABLE `inlong_cluster_node`
     UNIQUE KEY `unique_cluster_node` (`parent_id`, `type`, `ip`, `port`, `is_deleted`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT ='Inlong cluster node table';
+
+-- ----------------------------
+-- Table structure for data_node
+-- ----------------------------
+DROP TABLE IF EXISTS `data_node`;
+CREATE TABLE `data_node`
+(
+    `id`          int(11)      NOT NULL AUTO_INCREMENT COMMENT 'Incremental primary key',
+    `name`        varchar(128) NOT NULL COMMENT 'Node name',
+    `type`        varchar(20)       DEFAULT '' COMMENT 'Node type, such as: MYSQL, HIVE, KAFKA, ES, etc',
+    `url`         varchar(512)      DEFAULT NULL COMMENT 'Node URL',
+    `username`    varchar(128)      DEFAULT NULL COMMENT 'Username for node if needed',
+    `password`    varchar(128)      DEFAULT NULL COMMENT 'Password for node',
+    `ext_params`  text              DEFAULT NULL COMMENT 'Extended params, will saved as JSON string',
+    `in_charges`  varchar(512) NOT NULL COMMENT 'Name of responsible person, separated by commas',
+    `status`      int(4)            DEFAULT '0' COMMENT 'Node status',
+    `is_deleted`  int(11)           DEFAULT '0' COMMENT 'Whether to delete, 0: not deleted, > 0: deleted',
+    `creator`     varchar(64)  NOT NULL COMMENT 'Creator name',
+    `modifier`    varchar(64)       DEFAULT NULL COMMENT 'Modifier name',
+    `create_time` timestamp    NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Create time',
+    `modify_time` timestamp    NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Modify time',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `unique_data_node_index` (`name`, `type`, `is_deleted`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='Data node table';
 
 -- ----------------------------
 -- Table structure for third_party_cluster
@@ -529,7 +555,7 @@ CREATE TABLE `stream_source`
     `source_type`        varchar(20)           DEFAULT '0' COMMENT 'Source type, including: FILE, DB, etc',
     `agent_ip`           varchar(40)           DEFAULT NULL COMMENT 'Ip of the agent running the task',
     `uuid`               varchar(30)           DEFAULT NULL COMMENT 'Mac uuid of the agent running the task',
-    `server_id`          int(11)               DEFAULT NULL COMMENT 'Id of the source server',
+    `data_node_name`     varchar(128)          DEFAULT NULL COMMENT 'Node name, which links to data_node table',
     `cluster_id`         int(11)               DEFAULT NULL COMMENT 'Id of the cluster that collected this source',
     `serialization_type` varchar(20)           DEFAULT NULL COMMENT 'Serialization type, support: csv, json, canal, avro, etc',
     `snapshot`           text                  DEFAULT NULL COMMENT 'Snapshot of this source task',
@@ -588,6 +614,10 @@ CREATE TABLE `stream_sink`
     `sink_name`              varchar(128) NOT NULL DEFAULT '' COMMENT 'Sink name',
     `description`            varchar(500) NULL COMMENT 'Sink description',
     `enable_create_resource` tinyint(1)            DEFAULT '1' COMMENT 'Whether to enable create sink resource? 0: disable, 1: enable. default is 1',
+    `inlong_cluster_name`    varchar(128)          DEFAULT NULL COMMENT 'Cluster name, which links to inlong_cluster table',
+    `data_node_name`         varchar(128)          DEFAULT NULL COMMENT 'Node name, which links to data_node table',
+    `sort_task_name`         varchar(512)          DEFAULT NULL COMMENT 'Sort task name or task ID',
+    `sort_consumer_group`    varchar(512)          DEFAULT NULL COMMENT 'Consumer group name for Sort task',
     `ext_params`             text         NULL COMMENT 'Another fields, will saved as JSON type',
     `operate_log`            text                  DEFAULT NULL COMMENT 'Background operate log',
     `status`                 int(11)               DEFAULT '0' COMMENT 'Status',
