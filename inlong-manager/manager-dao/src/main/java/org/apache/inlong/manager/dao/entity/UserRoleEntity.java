@@ -17,21 +17,28 @@
 
 package org.apache.inlong.manager.dao.entity;
 
-import java.io.Serializable;
-import java.util.Date;
 import lombok.Data;
 
+import java.io.Serializable;
+import java.util.Date;
+
+/**
+ * User role entity, including username, role code, etc.
+ */
 @Data
 public class UserRoleEntity implements Serializable {
 
     private static final long serialVersionUID = 1L;
     private Integer id;
-    private String userName;
+    private String username;
     private String roleCode;
+
+    private Integer disabled;
+    private Integer isDeleted;
+    private String creator;
+    private String modifier;
     private Date createTime;
-    private Date updateTime;
-    private String createBy;
-    private String updateBy;
-    private Boolean disabled;
+    private Date modifyTime;
+    private Integer version;
 
 }

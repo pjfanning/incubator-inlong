@@ -17,6 +17,9 @@
 
 package org.apache.inlong.manager.plugin.flink.enums;
 
+/**
+ * Constants info, including properties, dataflow info and rest api url info.
+ */
 public class Constants {
 
     //properties
@@ -41,7 +44,7 @@ public class Constants {
 
     public static final String TYPE = "type";
 
-    public static final String ENTRYPOINT_CLASS = "org.apache.inlong.sort.singletenant.flink.Entrance";
+    public static final String ENTRYPOINT_CLASS = "org.apache.inlong.sort.Entrance";
 
     public static final String INLONG = "INLONG_";
 

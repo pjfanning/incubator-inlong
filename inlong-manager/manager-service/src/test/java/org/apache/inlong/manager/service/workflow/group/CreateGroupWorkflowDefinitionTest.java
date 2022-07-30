@@ -19,24 +19,29 @@ package org.apache.inlong.manager.service.workflow.group;
 
 import org.apache.inlong.manager.service.ServiceBaseTest;
 import org.apache.inlong.manager.workflow.definition.WorkflowProcess;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+/**
+ * Test class for workflow define process.
+ */
 public class CreateGroupWorkflowDefinitionTest extends ServiceBaseTest {
 
     @Autowired
     CreateGroupWorkflowDefinition createGroupWorkflowDefinition;
 
     @Test
-    public void testDefineProcess() {
+    public void testDefineProcess() throws CloneNotSupportedException {
         WorkflowProcess process = createGroupWorkflowDefinition.defineProcess();
-        Assert.assertEquals("Group Resource Creation", process.getType());
-        Assert.assertNotNull(process.getTaskByName("initSource"));
-        Assert.assertNotNull(process.getTaskByName("initMQ"));
-        Assert.assertNotNull(process.getTaskByName("initSort"));
-        Assert.assertNotNull(process.getTaskByName("initSink"));
-        Assert.assertEquals(4, process.getNameToTaskMap().size());
+        WorkflowProcess cloneProcess1 = process.clone();
+        WorkflowProcess cloneProcess2 = cloneProcess1.clone();
+        Assertions.assertNotSame(cloneProcess2, cloneProcess1);
+        Assertions.assertNotNull(process.getTaskByName("InitSource"));
+        Assertions.assertNotNull(process.getTaskByName("InitMQ"));
+        Assertions.assertNotNull(process.getTaskByName("InitSort"));
+        Assertions.assertNotNull(process.getTaskByName("InitSink"));
+        Assertions.assertEquals(4, process.getNameToTaskMap().size());
     }
 
 }

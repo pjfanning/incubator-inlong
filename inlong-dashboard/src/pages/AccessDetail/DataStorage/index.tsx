@@ -17,7 +17,7 @@
  * under the License.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, forwardRef } from 'react';
 import { Button, Modal, message } from 'antd';
 import HighTable from '@/components/HighTable';
 import { defaultSize } from '@/configs/pagination';
@@ -27,7 +27,7 @@ import { DataStorageDetailModal } from '@/components/AccessHelper';
 import { Storages } from '@/components/MetaData';
 import request from '@/utils/request';
 import { CommonInterface } from '../common';
-import { genStatusTag } from './status';
+import { statusList, genStatusTag } from './status';
 
 type Props = CommonInterface;
 
@@ -49,14 +49,23 @@ const getFilterFormContent = defaultValues => [
       })),
     },
   },
+  {
+    type: 'select',
+    name: 'status',
+    label: i18n.t('basic.Status'),
+    props: {
+      allowClear: true,
+      options: statusList,
+    },
+  },
 ];
 
-const Comp: React.FC<Props> = ({ inlongGroupId }) => {
+const Comp = ({ inlongGroupId, readonly }: Props, ref) => {
   const [options, setOptions] = useState({
     keyword: '',
     pageSize: defaultSize,
     pageNum: 1,
-    sinkType: 'HIVE',
+    sinkType: Storages[0].value,
   });
 
   const [curDataStreamIdentifier, setCurDataStreamIdentifier] = useState<string>();
@@ -86,7 +95,6 @@ const Comp: React.FC<Props> = ({ inlongGroupId }) => {
         pageNum: 1,
         pageSize: 1000,
         inlongGroupId,
-        sinkType: options.sinkType,
       },
     },
     {
@@ -208,16 +216,19 @@ const Comp: React.FC<Props> = ({ inlongGroupId }) => {
       {
         title: i18n.t('basic.Operating'),
         dataIndex: 'action',
-        render: (text, record) => (
-          <>
-            <Button type="link" onClick={() => onEdit(record)}>
-              {i18n.t('basic.Edit')}
-            </Button>
-            <Button type="link" onClick={() => onDelete(record)}>
-              {i18n.t('basic.Delete')}
-            </Button>
-          </>
-        ),
+        render: (text, record) =>
+          readonly ? (
+            '-'
+          ) : (
+            <>
+              <Button type="link" onClick={() => onEdit(record)}>
+                {i18n.t('basic.Edit')}
+              </Button>
+              <Button type="link" onClick={() => onDelete(record)}>
+                {i18n.t('basic.Delete')}
+              </Button>
+            </>
+          ),
       } as any,
     ]);
 
@@ -229,9 +240,11 @@ const Comp: React.FC<Props> = ({ inlongGroupId }) => {
           onFilter,
         }}
         suffix={
-          <Button type="primary" onClick={() => setCreateModal({ visible: true })}>
-            {i18n.t('pages.AccessDetail.DataStorage.New')}
-          </Button>
+          !readonly && (
+            <Button type="primary" onClick={() => setCreateModal({ visible: true })}>
+              {i18n.t('pages.AccessDetail.DataStorage.New')}
+            </Button>
+          )
         }
         table={{
           columns,
@@ -261,4 +274,4 @@ const Comp: React.FC<Props> = ({ inlongGroupId }) => {
   );
 };
 
-export default Comp;
+export default forwardRef(Comp);

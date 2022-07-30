@@ -17,11 +17,12 @@
 
 package org.apache.inlong.sort.standalone.source.sortsdk;
 
-import org.apache.commons.lang.ClassUtils;
+import org.apache.commons.lang3.ClassUtils;
 import org.apache.flume.Context;
 import org.apache.flume.EventDrivenSource;
 import org.apache.flume.conf.Configurable;
 import org.apache.flume.source.AbstractSource;
+import org.apache.inlong.common.pojo.sortstandalone.SortTaskConfig;
 import org.apache.inlong.sdk.commons.admin.AdminServiceRegister;
 import org.apache.inlong.sdk.sort.api.QueryConsumeConfig;
 import org.apache.inlong.sdk.sort.api.SortClient;
@@ -42,6 +43,8 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -69,6 +72,8 @@ public final class SortSdkSource extends AbstractSource
 
     // Log of {@link SortSdkSource}.
     private static final Logger LOG = LoggerFactory.getLogger(SortSdkSource.class);
+
+    public static final String SORT_SDK_PREFIX = "sortsdk.";
 
     // Default pool of {@link ScheduledExecutorService}.
     private static final int CORE_POOL_SIZE = 1;
@@ -151,24 +156,26 @@ public final class SortSdkSource extends AbstractSource
     }
 
     /**
-     * Create one {@link SortClient} with specific sort id.
+     * Create one {@link SortClient} with specific sort task.
      *
      * <p>
      * In current version, the {@link FetchCallback} will hold the client to ACK. For more details see
      * {@link FetchCallback#onFinished}
      * </p>
      *
-     * @param  sortId Sort in of new client.
+     * @param  sortTaskName Sort in of new client.
      * @return        New sort client.
      */
-    private SortClient newClient(final String sortId) {
-        LOG.info("Start to new sort client for id: {}", sortId);
+    private SortClient newClient(final String sortTaskName) {
+        LOG.info("Start to new sort client for task: {}", sortTaskName);
         try {
-            final SortClientConfig clientConfig = new SortClientConfig(sortId, this.sortClusterName,
+            final SortClientConfig clientConfig = new SortClientConfig(sortTaskName, this.sortClusterName,
                     new DefaultTopicChangeListener(),
                     SortSdkSource.defaultStrategy, InetAddress.getLocalHost().getHostAddress());
-            final FetchCallback callback = FetchCallback.Factory.create(sortId, getChannelProcessor(), context);
+            final FetchCallback callback = FetchCallback.Factory.create(sortTaskName, getChannelProcessor(), context);
             clientConfig.setCallback(callback);
+            Map<String, String> sortSdkParams = this.getSortClientConfigParameters();
+            clientConfig.setParameters(sortSdkParams);
 
             // create SortClient
             String configType = CommonPropertiesHolder
@@ -211,11 +218,30 @@ public final class SortSdkSource extends AbstractSource
             callback.setClient(client);
             return client;
         } catch (UnknownHostException ex) {
-            LOG.error("Got one UnknownHostException when init client of id:{}", sortId, ex);
+            LOG.error("Got one UnknownHostException when init client of id:{}", sortTaskName, ex);
         } catch (Throwable th) {
-            LOG.error("Got one throwable when init client of id:{}", sortId, th);
+            LOG.error("Got one throwable when init client of id:{}", sortTaskName, th);
         }
         return null;
+    }
+
+    /**
+     * getSortClientConfigParameters
+     * @return Map
+     */
+    private Map<String, String> getSortClientConfigParameters() {
+        Map<String, String> sortSdkParams = new HashMap<>();
+        Map<String, String> commonParams = CommonPropertiesHolder.getContext().getSubProperties(SORT_SDK_PREFIX);
+        sortSdkParams.putAll(commonParams);
+        SortTaskConfig taskConfig = SortClusterConfigHolder.getTaskConfig(taskName);
+        if (taskConfig != null) {
+            Map<String, String> sinkParams = taskConfig.getSinkParams();
+            if (sinkParams != null) {
+                Context sinkContext = new Context(sinkParams);
+                sortSdkParams.putAll(sinkContext.getSubProperties(SORT_SDK_PREFIX));
+            }
+        }
+        return sortSdkParams;
     }
 
     /**

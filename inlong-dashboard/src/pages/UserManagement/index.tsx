@@ -43,7 +43,7 @@ const Comp: React.FC = () => {
 
   const { data, loading, run: getList } = useRequest(
     {
-      url: '/user/listAllUsers',
+      url: '/user/listAll',
       params: options,
     },
     {
@@ -94,7 +94,7 @@ const Comp: React.FC = () => {
   const pagination = {
     pageSize: options.pageSize,
     current: options.pageNum,
-    total: data?.totalSize,
+    total: data?.total,
   };
 
   return (

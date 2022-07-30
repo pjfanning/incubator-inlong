@@ -17,24 +17,28 @@
 
 package org.apache.inlong.manager.workflow.core.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Maps;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.inlong.manager.common.consts.InlongConstants;
 import org.apache.inlong.manager.common.enums.ProcessStatus;
 import org.apache.inlong.manager.common.enums.TaskStatus;
 import org.apache.inlong.manager.common.exceptions.WorkflowException;
 import org.apache.inlong.manager.common.pojo.common.CountInfo;
-import org.apache.inlong.manager.common.pojo.workflow.ElementDTO;
-import org.apache.inlong.manager.common.pojo.workflow.EventLogQuery;
-import org.apache.inlong.manager.common.pojo.workflow.ProcessCountQuery;
+import org.apache.inlong.manager.common.pojo.workflow.ApproverRequest;
+import org.apache.inlong.manager.common.pojo.workflow.ElementInfo;
+import org.apache.inlong.manager.common.pojo.workflow.EventLogRequest;
+import org.apache.inlong.manager.common.pojo.workflow.ProcessCountRequest;
 import org.apache.inlong.manager.common.pojo.workflow.ProcessCountResponse;
 import org.apache.inlong.manager.common.pojo.workflow.ProcessDetailResponse;
-import org.apache.inlong.manager.common.pojo.workflow.ProcessQuery;
-import org.apache.inlong.manager.common.pojo.workflow.TaskCountQuery;
+import org.apache.inlong.manager.common.pojo.workflow.ProcessInfo;
+import org.apache.inlong.manager.common.pojo.workflow.ProcessRequest;
+import org.apache.inlong.manager.common.pojo.workflow.TaskCountRequest;
 import org.apache.inlong.manager.common.pojo.workflow.TaskCountResponse;
-import org.apache.inlong.manager.common.pojo.workflow.TaskQuery;
+import org.apache.inlong.manager.common.pojo.workflow.TaskRequest;
 import org.apache.inlong.manager.common.pojo.workflow.TaskResponse;
-import org.apache.inlong.manager.common.pojo.workflow.WorkflowApproverQuery;
-import org.apache.inlong.manager.common.pojo.workflow.WorkflowBriefDTO;
+import org.apache.inlong.manager.common.pojo.workflow.form.task.TaskForm;
+import org.apache.inlong.manager.common.util.Preconditions;
 import org.apache.inlong.manager.dao.entity.WorkflowApproverEntity;
 import org.apache.inlong.manager.dao.entity.WorkflowEventLogEntity;
 import org.apache.inlong.manager.dao.entity.WorkflowProcessEntity;
@@ -49,7 +53,6 @@ import org.apache.inlong.manager.workflow.core.WorkflowQueryService;
 import org.apache.inlong.manager.workflow.definition.Element;
 import org.apache.inlong.manager.workflow.definition.NextableElement;
 import org.apache.inlong.manager.workflow.definition.StartEvent;
-import org.apache.inlong.manager.common.pojo.workflow.form.TaskForm;
 import org.apache.inlong.manager.workflow.definition.UserTask;
 import org.apache.inlong.manager.workflow.definition.WorkflowProcess;
 import org.apache.inlong.manager.workflow.definition.WorkflowTask;
@@ -61,7 +64,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -81,6 +83,8 @@ public class WorkflowQueryServiceImpl implements WorkflowQueryService {
     private WorkflowEventLogEntityMapper eventLogMapper;
     @Autowired
     private WorkflowApproverEntityMapper approverMapper;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Override
     public WorkflowProcessEntity getProcessEntity(Integer processId) {
@@ -89,7 +93,7 @@ public class WorkflowQueryServiceImpl implements WorkflowQueryService {
 
     @Override
     public List<WorkflowTaskEntity> listApproveHistory(Integer processId) {
-        TaskQuery request = new TaskQuery();
+        TaskRequest request = new TaskRequest();
         request.setProcessId(processId);
         request.setStatusSet(TaskStatus.COMPLETED_STATUS);
         return taskEntityMapper.selectByQuery(request);
@@ -101,17 +105,17 @@ public class WorkflowQueryServiceImpl implements WorkflowQueryService {
     }
 
     @Override
-    public List<WorkflowProcessEntity> listProcessEntity(ProcessQuery query) {
+    public List<WorkflowProcessEntity> listProcessEntity(ProcessRequest query) {
         return processEntityMapper.selectByCondition(query);
     }
 
     @Override
-    public List<WorkflowTaskEntity> listTaskEntity(TaskQuery taskQuery) {
+    public List<WorkflowTaskEntity> listTaskEntity(TaskRequest taskQuery) {
         return taskEntityMapper.selectByQuery(taskQuery);
     }
 
     @Override
-    public ProcessCountResponse countProcess(ProcessCountQuery request) {
+    public ProcessCountResponse countProcess(ProcessCountRequest request) {
         List<CountInfo> result = processEntityMapper.countByQuery(request);
 
         Map<String, Integer> countByState = result.stream()
@@ -127,7 +131,7 @@ public class WorkflowQueryServiceImpl implements WorkflowQueryService {
     }
 
     @Override
-    public TaskCountResponse countTask(TaskCountQuery query) {
+    public TaskCountResponse countTask(TaskCountRequest query) {
         List<CountInfo> result = taskEntityMapper.countByQuery(query);
         TaskCountResponse response = new TaskCountResponse();
         for (CountInfo info : result) {
@@ -162,20 +166,13 @@ public class WorkflowQueryServiceImpl implements WorkflowQueryService {
             }
         } else {
             taskEntity = this.getTaskEntity(taskId);
-            List<String> taskApprovers = Arrays.asList(taskEntity.getApprovers().split(","));
+            List<String> taskApprovers = Arrays.asList(taskEntity.getApprovers().split(InlongConstants.COMMA));
             if (!taskApprovers.contains(operator)) {
-                WorkflowApproverQuery query = new WorkflowApproverQuery();
+                ApproverRequest query = new ApproverRequest();
                 query.setProcessName(processEntity.getName());
                 List<WorkflowApproverEntity> approverList = approverMapper.selectByQuery(query);
-                boolean match = approverList.stream().anyMatch(approverEntity -> {
-                    String[] approverArr = approverEntity.getApprovers().split(",");
-                    for (String approver : approverArr) {
-                        if (Objects.equals(approver, operator)) {
-                            return true;
-                        }
-                    }
-                    return false;
-                });
+                boolean match = approverList.stream().anyMatch(entity ->
+                        Preconditions.inSeparatedString(operator, entity.getApprovers(), InlongConstants.COMMA));
                 if (!match) {
                     throw new WorkflowException("current user is not the approver of the process");
                 }
@@ -211,7 +208,7 @@ public class WorkflowQueryServiceImpl implements WorkflowQueryService {
     }
 
     @Override
-    public List<WorkflowEventLogEntity> listEventLog(EventLogQuery request) {
+    public List<WorkflowEventLogEntity> listEventLog(EventLogRequest request) {
         return eventLogMapper.selectByCondition(request);
     }
 
@@ -220,7 +217,7 @@ public class WorkflowQueryServiceImpl implements WorkflowQueryService {
         List<TaskResponse> history = taskList.stream().map(WorkflowBeanUtils::fromTaskEntity)
                 .collect(Collectors.toList());
 
-        WorkflowBriefDTO workflowDTO = this.getBriefFromProcessEntity(processEntity);
+        ProcessInfo workflowDTO = this.getBriefFromProcessEntity(processEntity);
         ProcessDetailResponse processDetail = new ProcessDetailResponse();
         processDetail.setProcessInfo(WorkflowBeanUtils.fromProcessEntity(processEntity));
         processDetail.setTaskHistory(history);
@@ -228,33 +225,33 @@ public class WorkflowQueryServiceImpl implements WorkflowQueryService {
         return processDetail;
     }
 
-    private WorkflowBriefDTO getBriefFromProcessEntity(WorkflowProcessEntity processEntity) {
+    private ProcessInfo getBriefFromProcessEntity(WorkflowProcessEntity processEntity) {
         WorkflowProcess process = definitionRepository.get(processEntity.getName());
         if (process == null) {
             return null;
         }
 
         Map<String, TaskStatus> nameStatusMap = this.getTaskNameStatusMap(processEntity);
-        ElementDTO elementDTO = new ElementDTO();
+        ElementInfo elementInfo = new ElementInfo();
         StartEvent startEvent = process.getStartEvent();
-        elementDTO.setName(startEvent.getName());
-        elementDTO.setDisplayName(startEvent.getDisplayName());
+        elementInfo.setName(startEvent.getName());
+        elementInfo.setDisplayName(startEvent.getDisplayName());
 
-        WorkflowContext context = WorkflowBeanUtils.buildContext(process, processEntity);
-        addNext(startEvent, elementDTO, context, nameStatusMap);
+        WorkflowContext context = WorkflowBeanUtils.buildContext(objectMapper, process, processEntity);
+        addNext(startEvent, elementInfo, context, nameStatusMap);
 
-        WorkflowBriefDTO briefDTO = new WorkflowBriefDTO();
-        briefDTO.setName(process.getName());
-        briefDTO.setDisplayName(process.getDisplayName());
-        briefDTO.setType(process.getType());
-        briefDTO.setStartEvent(elementDTO);
-        return briefDTO;
+        ProcessInfo processInfo = new ProcessInfo();
+        processInfo.setName(process.getName());
+        processInfo.setDisplayName(process.getDisplayName());
+        processInfo.setType(process.getType());
+        processInfo.setStartEvent(elementInfo);
+        return processInfo;
     }
 
-    private void addNext(NextableElement nextableElement, ElementDTO elementDTO, WorkflowContext context,
+    private void addNext(NextableElement nextableElement, ElementInfo elementInfo, WorkflowContext context,
             Map<String, TaskStatus> nameToStatusMap) {
         for (Element element : nextableElement.getNextList(context)) {
-            ElementDTO nextElement = new ElementDTO();
+            ElementInfo nextElement = new ElementInfo();
             nextElement.setName(element.getName());
             nextElement.setDisplayName(element.getDisplayName());
 
@@ -263,7 +260,7 @@ public class WorkflowQueryServiceImpl implements WorkflowQueryService {
                 nextElement.setStatus(nameToStatusMap.get(element.getName()));
             }
 
-            elementDTO.getNext().add(nextElement);
+            elementInfo.getNext().add(nextElement);
             if (!(element instanceof NextableElement)) {
                 continue;
             }
@@ -272,7 +269,7 @@ public class WorkflowQueryServiceImpl implements WorkflowQueryService {
     }
 
     private Map<String, TaskStatus> getTaskNameStatusMap(WorkflowProcessEntity processEntity) {
-        TaskQuery request = TaskQuery.builder().processId(processEntity.getId()).build();
+        TaskRequest request = TaskRequest.builder().processId(processEntity.getId()).build();
         List<WorkflowTaskEntity> allTasks = taskEntityMapper.selectByQuery(request)
                 .stream()
                 .sorted(Comparator.comparing(WorkflowTaskEntity::getId)

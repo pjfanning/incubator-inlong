@@ -43,7 +43,7 @@ const Comp: React.FC<Props> = ({ inlongGroupId, ...modalProps }) => {
 
   const { run: getData, data } = useRequest(
     {
-      url: '/workflow/listTaskExecuteLogs',
+      url: '/workflow/listTaskLogs',
       params: {
         ...options,
         inlongGroupId: inlongGroupId,
@@ -83,6 +83,12 @@ const Comp: React.FC<Props> = ({ inlongGroupId, ...modalProps }) => {
     },
     [getData, inlongGroupId, t],
   );
+
+  useUpdateEffect(() => {
+    if (modalProps.visible) {
+      getData();
+    }
+  }, [options]);
 
   useUpdateEffect(() => {
     if (modalProps.visible) {

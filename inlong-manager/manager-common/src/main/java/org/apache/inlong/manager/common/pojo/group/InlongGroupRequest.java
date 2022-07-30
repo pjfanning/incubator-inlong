@@ -17,70 +17,67 @@
 
 package org.apache.inlong.manager.common.pojo.group;
 
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.validator.constraints.Length;
 
-import javax.validation.constraints.NotNull;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
 import java.util.List;
 
 /**
  * Inlong group request
  */
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @ApiModel("Inlong group create request")
-public class InlongGroupRequest {
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, visible = true, property = "mqType")
+public abstract class InlongGroupRequest {
 
+    @NotBlank(message = "inlongGroupId cannot be blank")
     @ApiModelProperty(value = "Inlong group id", required = true)
+    @Length(min = 4, max = 100, message = "inlongGroupId length must be between 4 and 100")
+    @Pattern(regexp = "^[a-z0-9_-]{4,100}$",
+            message = "inlongGroupId only supports lowercase letters, numbers, '-', or '_'")
     private String inlongGroupId;
 
     @ApiModelProperty(value = "Inlong group name", required = true)
     private String name;
 
-    @ApiModelProperty(value = "Chinese display name")
-    private String cnName;
-
     @ApiModelProperty(value = "Inlong group description")
     private String description;
 
-    @NotNull(message = "middlewareType cannot be null")
-    @ApiModelProperty(value = "Middleware type, high throughput: TUBE, high consistency: PULSAR")
+    @Deprecated
+    @ApiModelProperty(value = "MQ type, replaced by mqType")
     private String middlewareType;
 
-    @ApiModelProperty(value = "Queue model of Pulsar, parallel: multiple partitions, high throughput, out-of-order "
-            + "messages; serial: single partition, low throughput, and orderly messages")
-    @Builder.Default
-    private String queueModule = "parallel";
+    @NotBlank(message = "mqType cannot be blank")
+    @ApiModelProperty(value = "MQ type, high throughput: TUBE, high consistency: PULSAR")
+    private String mqType;
 
-    @ApiModelProperty(value = "The number of partitions of Pulsar Topic, 1-20")
-    @Builder.Default
-    private Integer topicPartitionNum = 3;
-
-    @ApiModelProperty(value = "MQ resource object, in inlong group",
-            notes = "Tube corresponds to Topic, Pulsar corresponds to Namespace")
-    private String mqResourceObj;
+    @ApiModelProperty(value = "MQ resource",
+            notes = "in inlong group, Tube corresponds to Topic, Pulsar corresponds to Namespace")
+    private String mqResource;
 
     @ApiModelProperty(value = "Tube master URL")
     private String tubeMaster;
 
-    @ApiModelProperty(value = "Pulsar admin URL")
-    private String pulsarAdminUrl;
+    @ApiModelProperty(value = "Whether to enable zookeeper? 0: disable, 1: enable")
+    private Integer enableZookeeper = 0;
 
-    @ApiModelProperty(value = "Pulsar service URL")
-    private String pulsarServiceUrl;
+    @ApiModelProperty(value = "Whether to enable zookeeper? 0: disable, 1: enable")
+    private Integer enableCreateResource = 1;
 
-    @ApiModelProperty(value = "Whether zookeeper enabled? 0: disabled, 1: enabled")
-    @Builder.Default
-    private Integer zookeeperEnabled = 0;
+    @ApiModelProperty(value = "Whether to use lightweight mode, 0: false, 1: true")
+    private Integer lightweight = 0;
 
-    @ApiModelProperty(value = "Data type name")
-    private String schemaName;
+    @ApiModelProperty(value = "Inlong cluster tag, which links to inlong_cluster table")
+    private String inlongClusterTag;
 
     @ApiModelProperty(value = "Number of access items per day, unit: 10,000 items per day")
     private Integer dailyRecords;
@@ -94,6 +91,7 @@ public class InlongGroupRequest {
     @ApiModelProperty(value = "The maximum length of a single piece of data, unit: Byte")
     private Integer maxLength;
 
+    @NotBlank(message = "inCharges cannot be blank")
     @ApiModelProperty(value = "Name of responsible person, separated by commas")
     private String inCharges;
 
@@ -103,16 +101,10 @@ public class InlongGroupRequest {
     @ApiModelProperty(value = "Name of creator")
     private String creator;
 
-    @ApiModelProperty(value = "Temporary view, string in JSON format")
-    private String tempView;
-
-    @ApiModelProperty(value = "data proxy cluster id")
-    private Integer proxyClusterId;
-
     @ApiModelProperty(value = "Inlong group Extension properties")
     private List<InlongGroupExtInfo> extList;
 
-    @ApiModelProperty(value = "The extension info for MQ")
-    private InlongGroupMqExtBase mqExtInfo;
+    @ApiModelProperty(value = "Version number")
+    private Integer version;
 
 }

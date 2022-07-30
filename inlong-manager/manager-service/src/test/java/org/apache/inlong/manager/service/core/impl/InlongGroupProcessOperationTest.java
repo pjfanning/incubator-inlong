@@ -21,99 +21,87 @@ import org.apache.inlong.manager.common.enums.GroupStatus;
 import org.apache.inlong.manager.common.enums.MQType;
 import org.apache.inlong.manager.common.enums.ProcessStatus;
 import org.apache.inlong.manager.common.pojo.group.InlongGroupInfo;
-import org.apache.inlong.manager.common.pojo.group.InlongGroupPulsarInfo;
-import org.apache.inlong.manager.common.pojo.group.InlongGroupRequest;
+import org.apache.inlong.manager.common.pojo.group.pulsar.InlongPulsarRequest;
 import org.apache.inlong.manager.common.pojo.workflow.ProcessResponse;
 import org.apache.inlong.manager.common.pojo.workflow.WorkflowResult;
 import org.apache.inlong.manager.service.ServiceBaseTest;
-import org.apache.inlong.manager.service.core.InlongGroupService;
+import org.apache.inlong.manager.service.core.operation.InlongGroupProcessOperation;
+import org.apache.inlong.manager.service.group.InlongGroupService;
 import org.apache.inlong.manager.service.mocks.MockPlugin;
-import org.apache.inlong.manager.service.workflow.ServiceTaskListenerFactory;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.inlong.manager.service.listener.GroupTaskListenerFactory;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 
-@EnableAutoConfiguration
+/**
+ * Inlong group process operation service test.
+ */
 public class InlongGroupProcessOperationTest extends ServiceBaseTest {
 
+    private static final String GROUP_ID = "test_group_process";
     private static final String OPERATOR = "operator";
-
-    private static final String GROUP_NAME = "test_biz";
-
-    private static final String GROUP_ID = "b_test_biz";
 
     @Autowired
     private InlongGroupService groupService;
-
     @Autowired
     private InlongGroupProcessOperation groupProcessOperation;
-
     @Autowired
-    private ServiceTaskListenerFactory serviceTaskListenerFactory;
+    private GroupTaskListenerFactory groupTaskListenerFactory;
 
-    public void before() {
+    @Test
+    public void testAllProcess() {
+        before();
+        testStartProcess();
+        testSuspendProcess();
+        testRestartProcess();
+
+        // delete the process, will delete the Pulsar resource
+        // TODO Mock the cluster related operate
+        // boolean result = groupProcessOperation.deleteProcess(GROUP_ID, OPERATOR);
+        // Assertions.assertTrue(result);
+    }
+
+    private void before() {
         MockPlugin mockPlugin = new MockPlugin();
-        serviceTaskListenerFactory.acceptPlugin(mockPlugin);
-        InlongGroupRequest groupInfo = new InlongGroupRequest();
+        groupTaskListenerFactory.acceptPlugin(mockPlugin);
+        InlongPulsarRequest groupInfo = new InlongPulsarRequest();
         groupInfo.setInlongGroupId(GROUP_ID);
-        groupInfo.setName(GROUP_NAME);
         groupInfo.setInCharges(OPERATOR);
-        groupInfo.setMiddlewareType(MQType.PULSAR.getType());
-        InlongGroupPulsarInfo pulsarInfo = new InlongGroupPulsarInfo();
-        pulsarInfo.setInlongGroupId(GROUP_ID);
-        groupInfo.setMqExtInfo(pulsarInfo);
+        groupInfo.setMqType(MQType.PULSAR.getType());
         groupService.save(groupInfo, OPERATOR);
     }
 
-    // There will be concurrency problems in the overall operation, and the testDeleteProcess() method will call
-    // @Test
-    public void testStartProcess() {
-        before();
+    private void testStartProcess() {
+        InlongGroupInfo groupInfo = groupService.get(GROUP_ID);
+        groupInfo.setInlongClusterTag("default_cluster");
+        groupService.update(groupInfo.genRequest(), OPERATOR);
+
         WorkflowResult result = groupProcessOperation.startProcess(GROUP_ID, OPERATOR);
         ProcessResponse response = result.getProcessInfo();
-        Assert.assertSame(response.getStatus(), ProcessStatus.PROCESSING);
-        InlongGroupInfo groupInfo = groupService.get(GROUP_ID);
-        Assert.assertEquals(groupInfo.getStatus(), GroupStatus.TO_BE_APPROVAL.getCode());
+        Assertions.assertSame(response.getStatus(), ProcessStatus.PROCESSING);
+        groupInfo = groupService.get(GROUP_ID);
+        Assertions.assertEquals(groupInfo.getStatus(), GroupStatus.TO_BE_APPROVAL.getCode());
     }
 
-    // There will be concurrency problems in the overall operation, and the testDeleteProcess() method will call
-    // @Test
-    public void testSuspendProcess() {
-        testStartProcess();
-        InlongGroupInfo groupInfo = groupService.get(GROUP_ID);
+    private void testSuspendProcess() {
         groupService.updateStatus(GROUP_ID, GroupStatus.APPROVE_PASSED.getCode(), OPERATOR);
-        groupService.update(groupInfo.genRequest(), OPERATOR);
         groupService.updateStatus(GROUP_ID, GroupStatus.CONFIG_ING.getCode(), OPERATOR);
-        groupService.update(groupInfo.genRequest(), OPERATOR);
         groupService.updateStatus(GROUP_ID, GroupStatus.CONFIG_SUCCESSFUL.getCode(), OPERATOR);
-        groupService.update(groupInfo.genRequest(), OPERATOR);
 
         WorkflowResult result = groupProcessOperation.suspendProcess(GROUP_ID, OPERATOR);
         ProcessResponse response = result.getProcessInfo();
-        Assert.assertSame(response.getStatus(), ProcessStatus.COMPLETED);
-        groupInfo = groupService.get(GROUP_ID);
-        Assert.assertEquals(groupInfo.getStatus(), GroupStatus.SUSPENDED.getCode());
+        Assertions.assertSame(response.getStatus(), ProcessStatus.COMPLETED);
+        InlongGroupInfo groupInfo = groupService.get(GROUP_ID);
+        Assertions.assertEquals(groupInfo.getStatus(), GroupStatus.SUSPENDED.getCode());
     }
 
-    // There will be concurrency problems in the overall operation, and the testDeleteProcess() method will call
-    // @Test
-    public void testRestartProcess() {
-        testSuspendProcess();
+    private void testRestartProcess() {
         WorkflowResult result = groupProcessOperation.restartProcess(GROUP_ID, OPERATOR);
         ProcessResponse response = result.getProcessInfo();
-        Assert.assertSame(response.getStatus(), ProcessStatus.COMPLETED);
+        Assertions.assertSame(response.getStatus(), ProcessStatus.COMPLETED);
         InlongGroupInfo groupInfo = groupService.get(GROUP_ID);
-        Assert.assertEquals(groupInfo.getStatus(), GroupStatus.RESTARTED.getCode());
+        Assertions.assertEquals(groupInfo.getStatus(), GroupStatus.RESTARTED.getCode());
     }
 
-    @Test
-    public void testDeleteProcess() {
-        testStartProcess();
-        // testRestartProcess();
-        // boolean result = groupProcessOperation.deleteProcess(GROUP_ID, OPERATOR);
-        // Assert.assertTrue(result);
-
-    }
 }
 

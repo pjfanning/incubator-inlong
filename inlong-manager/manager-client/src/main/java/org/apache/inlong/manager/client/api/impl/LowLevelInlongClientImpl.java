@@ -24,14 +24,19 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.MapUtils;
 import org.apache.inlong.manager.client.api.ClientConfiguration;
 import org.apache.inlong.manager.client.api.LowLevelInlongClient;
-import org.apache.inlong.manager.client.api.inner.InnerInlongManagerClient;
-import org.apache.inlong.manager.common.beans.Response;
-import org.apache.inlong.manager.common.pojo.group.InlongGroupListResponse;
+import org.apache.inlong.manager.client.api.inner.client.InlongClusterClient;
+import org.apache.inlong.manager.client.api.inner.client.InlongGroupClient;
+import org.apache.inlong.manager.client.api.util.ClientUtils;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterRequest;
+import org.apache.inlong.manager.common.pojo.group.InlongGroupBriefInfo;
 import org.apache.inlong.manager.common.pojo.group.InlongGroupPageRequest;
 import org.apache.inlong.manager.common.util.HttpUtils;
 
 import java.util.Map;
 
+/**
+ * Low level inlong client service implementation.
+ */
 @Slf4j
 public class LowLevelInlongClientImpl implements LowLevelInlongClient {
 
@@ -40,6 +45,9 @@ public class LowLevelInlongClientImpl implements LowLevelInlongClient {
     @Getter
     private final ClientConfiguration configuration;
 
+    /**
+     * Constructor of LowLevelInlongClientImpl.
+     */
     public LowLevelInlongClientImpl(String serviceUrl, ClientConfiguration configuration) {
         Map<String, String> hostPorts = Splitter.on(URL_SPLITTER).withKeyValueSeparator(HOST_SPLITTER)
                 .split(serviceUrl);
@@ -65,8 +73,14 @@ public class LowLevelInlongClientImpl implements LowLevelInlongClient {
     }
 
     @Override
-    public Response<PageInfo<InlongGroupListResponse>> listGroup(InlongGroupPageRequest request) throws Exception {
-        InnerInlongManagerClient managerClient = new InnerInlongManagerClient(this.configuration);
-        return managerClient.listGroups(request);
+    public Integer saveCluster(ClusterRequest request) {
+        InlongClusterClient clusterClient = ClientUtils.getClientFactory(configuration).getClusterClient();
+        return clusterClient.saveCluster(request);
+    }
+
+    @Override
+    public PageInfo<InlongGroupBriefInfo> listGroup(InlongGroupPageRequest request) {
+        InlongGroupClient groupClient = ClientUtils.getClientFactory(configuration).getGroupClient();
+        return groupClient.listGroups(request);
     }
 }

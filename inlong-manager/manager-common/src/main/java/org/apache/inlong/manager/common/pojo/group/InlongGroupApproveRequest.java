@@ -21,6 +21,8 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
+import javax.validation.constraints.NotBlank;
+
 /**
  * Inlong group approval info
  */
@@ -31,17 +33,19 @@ public class InlongGroupApproveRequest {
     @ApiModelProperty(value = "Primary key")
     private Integer id;
 
+    @NotBlank(message = "inlongGroupId cannot be blank")
     @ApiModelProperty(value = "Inlong group id", required = true)
     private String inlongGroupId;
 
-    @ApiModelProperty(value = "Middleware Type")
-    private String middlewareType;
+    @NotBlank(message = "mqType cannot be blank")
+    @ApiModelProperty(value = "MQ Type")
+    private String mqType;
 
-    @ApiModelProperty(value = "MQ resource object, for Tube, it's Topic")
-    private String mqResourceObj;
+    @ApiModelProperty(value = "MQ resource, for Tube, it is Topic, for Pulsar, it is Namespace")
+    private String mqResource;
 
-    @ApiModelProperty(value = "Data type name")
-    private String schemaName;
+    @ApiModelProperty(value = "Inlong cluster tag, inlong group will be associated with the cluster")
+    private String inlongClusterTag;
 
     @ApiModelProperty(value = "The partition num of Pulsar topic, between 1-20")
     private Integer topicPartitionNum;

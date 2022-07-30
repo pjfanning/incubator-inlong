@@ -18,23 +18,19 @@
 package org.apache.inlong.manager.service.core;
 
 import com.github.pagehelper.PageInfo;
-import org.apache.inlong.manager.common.pojo.stream.FullStreamRequest;
-import org.apache.inlong.manager.common.pojo.stream.FullStreamResponse;
 import org.apache.inlong.manager.common.pojo.stream.InlongStreamApproveRequest;
+import org.apache.inlong.manager.common.pojo.stream.InlongStreamBriefInfo;
 import org.apache.inlong.manager.common.pojo.stream.InlongStreamInfo;
-import org.apache.inlong.manager.common.pojo.stream.InlongStreamListResponse;
 import org.apache.inlong.manager.common.pojo.stream.InlongStreamPageRequest;
 import org.apache.inlong.manager.common.pojo.stream.InlongStreamRequest;
-import org.apache.inlong.manager.common.pojo.stream.InlongStreamTopicResponse;
-import org.apache.inlong.manager.common.pojo.stream.StreamBriefResponse;
 
 import java.util.List;
 
 /**
  * Inlong stream service layer interface
  *
- * @apiNote It is associated with various DataSources, the upstream is StreamSource, and the downstream is
- *         StreamSink
+ * @apiNote InlongStream was associated with various sources, the upstream is StreamSource,
+ *         and the downstream is StreamSink
  */
 public interface InlongStreamService {
 
@@ -59,8 +55,8 @@ public interface InlongStreamService {
     /**
      * List streams contained in one group
      *
-     * @param groupId
-     * @return
+     * @param groupId inlong group id.
+     * @return Inlong stream info list
      */
     List<InlongStreamInfo> list(String groupId);
 
@@ -74,12 +70,28 @@ public interface InlongStreamService {
     Boolean exist(String groupId, String streamId);
 
     /**
-     * Query inlong stream list based on conditions
+     * Paging query inlong stream brief info list
      *
-     * @param request Inlong stream paging query request
-     * @return Inlong stream paging list
+     * @param request query request
+     * @return inlong stream brief list
      */
-    PageInfo<InlongStreamListResponse> listByCondition(InlongStreamPageRequest request);
+    PageInfo<InlongStreamBriefInfo> listBrief(InlongStreamPageRequest request);
+
+    /**
+     * Paging query inlong stream full info list, and get all related sources and sinks
+     *
+     * @param request query request
+     * @return inlong stream info list
+     */
+    PageInfo<InlongStreamInfo> listAll(InlongStreamPageRequest request);
+
+    /**
+     * Get the inlong stream brief list and related sink brief list.
+     *
+     * @param groupId inlong group id
+     * @return brief list of inlong stream
+     */
+    List<InlongStreamBriefInfo> listBriefWithSink(String groupId);
 
     /**
      * InlongStream info that needs to be modified
@@ -110,42 +122,6 @@ public interface InlongStreamService {
     Boolean logicDeleteAll(String groupId, String operator);
 
     /**
-     * Obtain the flow of inlong stream according to groupId
-     *
-     * @param groupId Inlong group id
-     * @return Summary list of inlong stream
-     */
-    List<StreamBriefResponse> getBriefList(String groupId);
-
-    /**
-     * Save all information related to the inlong stream, its data source, and stream sink
-     *
-     * @param fullStreamRequest All information on the page
-     * @param operator Edit person's name
-     * @return Whether the save was successful
-     */
-    boolean saveAll(FullStreamRequest fullStreamRequest, String operator);
-
-    /**
-     * Save inlong streams, their data sources, and all information related to stream sink in batches
-     *
-     * @param fullStreamRequestList List of inlong stream page information
-     * @param operator Edit person's name
-     * @return Whether the save was successful
-     * @apiNote This interface is only used when creating a new inlong group. To ensure data consistency,
-     *         all associated data needs to be physically deleted, and then added
-     */
-    boolean batchSaveAll(List<FullStreamRequest> fullStreamRequestList, String operator);
-
-    /**
-     * Paging query all data of the inlong stream page under the specified groupId
-     *
-     * @param request Query
-     * @return Paging list of all data on the inlong stream page
-     */
-    PageInfo<FullStreamResponse> listAllWithGroupId(InlongStreamPageRequest request);
-
-    /**
      * According to the group id, query the number of valid inlong streams belonging to this service
      *
      * @param groupId Inlong group id
@@ -156,7 +132,7 @@ public interface InlongStreamService {
     /**
      * According to the inlong group id, query the Topic list
      */
-    List<InlongStreamTopicResponse> getTopicList(String groupId);
+    List<InlongStreamBriefInfo> getTopicList(String groupId);
 
     /**
      * Save the information modified when the approval is passed

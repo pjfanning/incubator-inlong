@@ -21,33 +21,27 @@ import lombok.Data;
 
 import java.io.Serializable;
 
+/**
+ * Stream source field entity, including field name, field value, etc.
+ */
 @Data
 public class StreamSourceFieldEntity implements Serializable {
+
+    private static final long serialVersionUID = 1L;
     private Integer id;
-
     private String inlongGroupId;
-
     private String inlongStreamId;
-
     private Integer sourceId;
-
     private String sourceType;
-
     private String fieldName;
-
-    private String fieldValue;
-
-    private String preExpression;
-
     private String fieldType;
-
     private String fieldComment;
-
+    private String fieldValue;
+    private String preExpression;
     private Integer isMetaField;
-
+    private String metaFieldName;
     private String fieldFormat;
-
     private Integer rankNum;
-
     private Integer isDeleted;
+
 }

@@ -100,7 +100,7 @@ const Comp: React.FC<MyAccessModalProps> = ({ ...modalProps }) => {
     },
     {
       title: t('components.ConsumeHelper.BusinessSelect.MyBusinessModal.BusinessName'),
-      dataIndex: 'cnName',
+      dataIndex: 'name',
     },
     {
       title: t('components.ConsumeHelper.BusinessSelect.MyBusinessModal.Owners'),
@@ -124,7 +124,7 @@ const Comp: React.FC<MyAccessModalProps> = ({ ...modalProps }) => {
   const pagination = {
     pageSize: 10,
     current: options.pageNum,
-    total: data?.totalSize,
+    total: data?.total,
   };
 
   return (

@@ -18,37 +18,40 @@
 package org.apache.inlong.manager.plugin.listener;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.inlong.manager.common.consts.InlongConstants;
 import org.apache.inlong.manager.common.pojo.group.InlongGroupExtInfo;
-import org.apache.inlong.manager.common.pojo.group.InlongGroupInfo;
-import org.apache.inlong.manager.common.pojo.workflow.form.UpdateGroupProcessForm;
-import org.apache.inlong.manager.common.settings.InlongGroupSettings;
+import org.apache.inlong.manager.common.pojo.group.pulsar.InlongPulsarInfo;
+import org.apache.inlong.manager.common.pojo.workflow.form.process.GroupResourceProcessForm;
 import org.apache.inlong.manager.workflow.WorkflowContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Test class for suspend sort listener.
+ */
 public class SuspendSortListenerTest {
 
     @Test
     public void testListener() throws Exception {
         WorkflowContext context = new WorkflowContext();
-        UpdateGroupProcessForm updateGroupProcessForm = new UpdateGroupProcessForm();
-        context.setProcessForm(updateGroupProcessForm);
-        InlongGroupInfo inlongGroupInfo = new InlongGroupInfo();
-        inlongGroupInfo.setInlongGroupId("1");
-        updateGroupProcessForm.setGroupInfo(inlongGroupInfo);
+        GroupResourceProcessForm groupResourceForm = new GroupResourceProcessForm();
+        context.setProcessForm(groupResourceForm);
+        InlongPulsarInfo pulsarInfo = new InlongPulsarInfo();
+        pulsarInfo.setInlongGroupId("1");
+        groupResourceForm.setGroupInfo(pulsarInfo);
 
         InlongGroupExtInfo inlongGroupExtInfo1 = new InlongGroupExtInfo();
-        inlongGroupExtInfo1.setKeyName(InlongGroupSettings.SORT_URL);
+        inlongGroupExtInfo1.setKeyName(InlongConstants.SORT_URL);
         inlongGroupExtInfo1.setKeyValue("127.0.0.1:8085");
         List<InlongGroupExtInfo> inlongGroupExtInfos = new ArrayList<>();
         inlongGroupExtInfos.add(inlongGroupExtInfo1);
 
         InlongGroupExtInfo inlongGroupExtInfo2 = new InlongGroupExtInfo();
-        inlongGroupExtInfo2.setKeyName(InlongGroupSettings.SORT_PROPERTIES);
+        inlongGroupExtInfo2.setKeyName(InlongConstants.SORT_PROPERTIES);
         ObjectMapper objectMapper = new ObjectMapper();
         Map<String, String> sortProperties = new HashMap<>(16);
         String sortStr = objectMapper.writeValueAsString(sortProperties);
@@ -56,11 +59,11 @@ public class SuspendSortListenerTest {
         inlongGroupExtInfos.add(inlongGroupExtInfo2);
 
         InlongGroupExtInfo inlongGroupExtInfo5 = new InlongGroupExtInfo();
-        inlongGroupExtInfo5.setKeyName(InlongGroupSettings.SORT_JOB_ID);
+        inlongGroupExtInfo5.setKeyName(InlongConstants.SORT_JOB_ID);
         inlongGroupExtInfo5.setKeyValue("ea405ab424cfc35ae9be93df8ea87917");
         inlongGroupExtInfos.add(inlongGroupExtInfo5);
 
-        inlongGroupInfo.setExtList(inlongGroupExtInfos);
+        pulsarInfo.setExtList(inlongGroupExtInfos);
 
         SuspendSortListener pauseSortListener = new SuspendSortListener();
         // This method temporarily fails the test, so comment it out first

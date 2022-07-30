@@ -22,6 +22,9 @@ import lombok.Data;
 import java.io.Serializable;
 import java.util.Date;
 
+/**
+ * Stream sink entity, including sink type, sink name, etc.
+ */
 @Data
 public class StreamSinkEntity implements Serializable {
 
@@ -38,6 +41,8 @@ public class StreamSinkEntity implements Serializable {
     private String sortConsumerGroup;
     private Integer enableCreateResource;
 
+    // Another fields saved as JSON string in extParams
+    private String extParams;
     private String operateLog;
     private Integer status;
     private Integer previousStatus;
@@ -46,8 +51,6 @@ public class StreamSinkEntity implements Serializable {
     private String modifier;
     private Date createTime;
     private Date modifyTime;
-
-    // Another fields saved as JSON string in extParams
-    private String extParams;
+    private Integer version;
 
 }

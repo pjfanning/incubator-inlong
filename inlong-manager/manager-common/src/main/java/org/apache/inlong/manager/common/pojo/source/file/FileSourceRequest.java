@@ -22,24 +22,25 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import org.apache.inlong.manager.common.enums.DataFormat;
 import org.apache.inlong.manager.common.enums.SourceType;
 import org.apache.inlong.manager.common.pojo.source.SourceRequest;
 import org.apache.inlong.manager.common.util.JsonTypeDefine;
 
 /**
- * Request of File Source Info
+ * File source request
  */
 @Data
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
 @JsonTypeDefine(value = SourceType.SOURCE_FILE)
-@ApiModel(value = "Request of the kafka source info")
+@ApiModel(value = "File source request")
 public class FileSourceRequest extends SourceRequest {
 
-    @ApiModelProperty("Agent IP address")
+    @ApiModelProperty(value = "Agent IP address", required = true)
     private String ip;
 
-    @ApiModelProperty("Path regex pattern for file, such as /a/b/*.txt")
+    @ApiModelProperty(value = "Path regex pattern for file, such as /a/b/*.txt", required = true)
     private String pattern;
 
     @ApiModelProperty("TimeOffset for collection, "
@@ -51,6 +52,7 @@ public class FileSourceRequest extends SourceRequest {
 
     public FileSourceRequest() {
         this.setSourceType(SourceType.FILE.toString());
+        this.setSerializationType(DataFormat.CSV.getName());
     }
 
 }

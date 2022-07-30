@@ -17,12 +17,17 @@
 
 package org.apache.inlong.manager.workflow.event.task;
 
+import org.apache.inlong.manager.common.pojo.workflow.form.process.GroupResourceProcessForm;
 import org.apache.inlong.manager.workflow.WorkflowContext;
 import org.apache.inlong.manager.workflow.event.ListenerResult;
 
+/**
+ * Listener of operate Message Queue.
+ */
 public interface QueueOperateListener extends TaskEventListener {
 
     QueueOperateListener DEFAULT_QUEUE_OPERATE_LISTENER = new QueueOperateListener() {
+
         @Override
         public TaskEvent event() {
             return TaskEvent.COMPLETE;
@@ -33,10 +38,19 @@ public interface QueueOperateListener extends TaskEventListener {
             return ListenerResult.success();
         }
 
-        @Override
-        public boolean async() {
+    };
+
+    /**
+     * Check whether the process form from the workflow context is {@link GroupResourceProcessForm}
+     *
+     * @param context workflow context
+     * @return true if the process form is instanceof GroupResourceProcessForm
+     */
+    default boolean isGroupProcessForm(WorkflowContext context) {
+        if (context == null) {
             return false;
         }
-    };
+        return context.getProcessForm() instanceof GroupResourceProcessForm;
+    }
 
 }

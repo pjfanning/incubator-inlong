@@ -21,20 +21,20 @@ import React from 'react';
 import { Divider, Modal, message } from 'antd';
 import { ModalProps } from 'antd/es/modal';
 import FormGenerator, { useForm } from '@/components/FormGenerator';
-import { useUpdateEffect } from '@/hooks';
+import { useUpdateEffect, useRequest } from '@/hooks';
 import i18n from '@/i18n';
 import { genBusinessFields, genDataFields } from '@/components/AccessHelper';
 import request from '@/utils/request';
-import { valuesToData } from '@/pages/AccessCreate/DataStream/helper';
+import { dataToValues, valuesToData } from './helper';
 import { pickObject } from '@/utils';
 
 export interface Props extends ModalProps {
   inlongGroupId: string;
   record?: Record<string, any>;
-  middlewareType: string;
+  mqType: string;
 }
 
-export const genFormContent = (currentValues, inlongGroupId, middlewareType) => {
+export const genFormContent = (currentValues, inlongGroupId, mqType) => {
   const extraParams = {
     inlongGroupId,
   };
@@ -55,19 +55,13 @@ export const genFormContent = (currentValues, inlongGroupId, middlewareType) => 
         {
           type: (
             <Divider orientation="left">
-              {i18n.t('pages.AccessCreate.DataStream.config.DataSources')}
-            </Divider>
-          ),
-        },
-        'dataSourceType',
-        {
-          type: (
-            <Divider orientation="left">
               {i18n.t('pages.AccessCreate.DataStream.config.DataInfo')}
             </Divider>
           ),
         },
         'dataType',
+        'dataEncoding',
+        'dataSeparator',
         'rowTypeFields',
         {
           type: (
@@ -75,7 +69,7 @@ export const genFormContent = (currentValues, inlongGroupId, middlewareType) => 
               {i18n.t('pages.AccessCreate.Business.config.AccessScale')}
             </Divider>
           ),
-          visible: middlewareType === 'PULSAR',
+          visible: mqType === 'PULSAR',
         },
       ],
       currentValues,
@@ -84,13 +78,13 @@ export const genFormContent = (currentValues, inlongGroupId, middlewareType) => 
     ...genBusinessFields(['dailyRecords', 'dailyStorage', 'peakRecords', 'maxLength']).map(
       item => ({
         ...item,
-        visible: middlewareType === 'PULSAR',
+        visible: mqType === 'PULSAR',
       }),
     ),
   ].map(item => {
     const obj = { ...item };
 
-    if (obj.name === 'inlongStreamId' || obj.name === 'dataSourceType' || obj.name === 'dataType') {
+    if (obj.name === 'inlongStreamId' || obj.name === 'dataType') {
       obj.type = 'text';
     }
 
@@ -98,22 +92,34 @@ export const genFormContent = (currentValues, inlongGroupId, middlewareType) => 
   });
 };
 
-const Comp: React.FC<Props> = ({ inlongGroupId, record, middlewareType, ...modalProps }) => {
+const Comp: React.FC<Props> = ({ inlongGroupId, record, mqType, ...modalProps }) => {
   const [form] = useForm();
+
+  const { run: getStreamData } = useRequest(
+    {
+      url: '/stream/get',
+      params: {
+        groupId: inlongGroupId,
+        streamId: record.inlongStreamId,
+      },
+    },
+    {
+      manual: true,
+      onSuccess: result => form.setFieldsValue(dataToValues([result])?.[0]),
+    },
+  );
+
   const onOk = async () => {
     const values = {
-      ...pickObject(['id', 'inlongGroupId', 'inlongStreamId', 'dataSourceBasicId'], record),
+      ...pickObject(['id', 'inlongGroupId', 'inlongStreamId', 'version'], record),
       ...(await form.validateFields()),
     };
 
-    const data = valuesToData(values ? [values] : [], inlongGroupId);
-    const submitData = data.map(item =>
-      pickObject(['dbBasicInfo', 'fileBasicInfo', 'streamInfo'], item),
-    );
+    const submitData = valuesToData(values ? [values] : [], inlongGroupId);
     await request({
       url: '/stream/update',
       method: 'POST',
-      data: submitData?.[0]?.streamInfo,
+      data: submitData?.[0],
     });
     await modalProps?.onOk(values);
     message.success(i18n.t('basic.OperatingSuccess'));
@@ -123,9 +129,9 @@ const Comp: React.FC<Props> = ({ inlongGroupId, record, middlewareType, ...modal
     if (modalProps.visible) {
       // open
       form.resetFields(); // Note that it will cause the form to remount to initiate a select request
-    }
-    if (Object.keys(record || {})?.length) {
-      form.setFieldsValue(record);
+      if (Object.keys(record || {})?.length) {
+        getStreamData();
+      }
     }
   }, [modalProps.visible]);
 
@@ -139,7 +145,7 @@ const Comp: React.FC<Props> = ({ inlongGroupId, record, middlewareType, ...modal
       <FormGenerator
         labelCol={{ span: 4 }}
         wrapperCol={{ span: 20 }}
-        content={genFormContent(record, inlongGroupId, middlewareType)}
+        content={genFormContent(record, inlongGroupId, mqType)}
         form={form}
         useMaxWidth
       />

@@ -18,12 +18,13 @@
 
 package org.apache.inlong.sdk.dataproxy.example;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.apache.inlong.sdk.dataproxy.ProxyClientConfig;
 import org.apache.inlong.sdk.dataproxy.network.HttpProxySender;
 import org.apache.inlong.sdk.dataproxy.network.ProxysdkException;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class HttpClientExample {
 
@@ -38,7 +39,7 @@ public class HttpClientExample {
          * so config file is :
          *  /data/inlong/dataproxy/conf/test.local
          * and config context like this:
-         *  {"isInterVisit":1,"cluster_id":"1","size":1,"switch":1,"address":[{"host":"127.0.0
+         *  {"isInterVisit":1,"clusterId":"1","size":1,"switch":1,"address":[{"host":"127.0.0
          * .1","port":"46802"},{"host":"127.0.0.1","port":"46802"}]}
          *
          * 2. if 'isLocalVisit' is false
@@ -70,7 +71,7 @@ public class HttpClientExample {
         try {
             proxyConfig = new ProxyClientConfig(localIP, isLocalVisit, inLongManagerAddr,
                     Integer.valueOf(inLongManagerPort),
-                    dataProxyGroup, netTag);
+                    dataProxyGroup, netTag, "test", "123456");
             proxyConfig.setGroupId(dataProxyGroup);
             proxyConfig.setConfStoreBasePath(configBasePath);
             proxyConfig.setReadProxyIPFromLocal(isReadProxyIPFromLocal);

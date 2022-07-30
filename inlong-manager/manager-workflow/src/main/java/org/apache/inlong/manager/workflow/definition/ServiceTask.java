@@ -19,19 +19,23 @@ package org.apache.inlong.manager.workflow.definition;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.inlong.manager.common.exceptions.WorkflowException;
 import org.apache.inlong.manager.common.util.Preconditions;
 import org.apache.inlong.manager.workflow.WorkflowAction;
 import org.apache.inlong.manager.workflow.WorkflowContext;
+import org.apache.inlong.manager.workflow.event.EventListener;
 import org.apache.inlong.manager.workflow.event.task.TaskEventListener;
 import org.springframework.util.CollectionUtils;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 /**
  * Service task workflow
@@ -43,8 +47,8 @@ public class ServiceTask extends WorkflowTask {
             .of(WorkflowAction.COMPLETE, WorkflowAction.CANCEL, WorkflowAction.TERMINATE);
 
     private final AtomicBoolean isInit = new AtomicBoolean(false);
-    private ServiceTaskListenerProvider<TaskEventListener> listenerProvider;
-    private ServiceTaskType serviceTaskType;
+    private TaskListenerFactory listenerFactory;
+    private ServiceTaskType taskType;
 
     @Override
     public WorkflowAction defaultNextAction() {
@@ -83,33 +87,56 @@ public class ServiceTask extends WorkflowTask {
         }
     }
 
-    @SneakyThrows
     @Override
+    @SneakyThrows
     public ServiceTask clone() {
-        ServiceTask serviceTask = (ServiceTask) super.clone();
-        serviceTask.addServiceTaskType(this.serviceTaskType);
-        serviceTask.addListenerProvider(this.listenerProvider);
-        serviceTask.isInit.set(false);
+        ServiceTask serviceTask = new ServiceTask();
+        serviceTask.setName(this.getName());
+        serviceTask.setDisplayName(this.getDisplayName());
+        serviceTask.setServiceTaskType(this.taskType);
+        serviceTask.setListenerFactory(this.listenerFactory);
+        Map<WorkflowAction, List<ConditionNextElement>> cloneActionToNextElementMap = Maps.newHashMap();
+        this.getActionToNextElementMap().forEach(
+                (k, v) -> cloneActionToNextElementMap.put(k, v.stream().map(ele -> {
+                    try {
+                        return (ConditionNextElement) ele.clone();
+                    } catch (CloneNotSupportedException e) {
+                        log.error("clone service task error: ", e);
+                    }
+                    return null;
+                }).collect(Collectors.toList())));
+        serviceTask.setActionToNextElementMap(cloneActionToNextElementMap);
         return serviceTask;
     }
 
-    public void addListenerProvider(ServiceTaskListenerProvider<TaskEventListener> provider) {
-        this.listenerProvider = provider;
+    /**
+     * Set the listener factory for the Service Task.
+     */
+    public void setListenerFactory(TaskListenerFactory factory) {
+        this.listenerFactory = factory;
     }
 
-    public void addServiceTaskType(ServiceTaskType type) {
-        this.serviceTaskType = type;
+    /**
+     * Set the task type for the Service Task.
+     */
+    public void setServiceTaskType(ServiceTaskType type) {
+        this.taskType = type;
     }
 
+    /**
+     * Init the listeners for current Service Task.
+     */
     public void initListeners(WorkflowContext workflowContext) {
         if (isInit.compareAndSet(false, true)) {
-            if (listenerProvider == null || serviceTaskType == null) {
+            if (listenerFactory == null || taskType == null) {
                 return;
             }
-            Iterable<TaskEventListener> listeners = listenerProvider.get(workflowContext, serviceTaskType);
-            addListeners(Lists.newArrayList(listeners));
+            List<TaskEventListener> listeners = Lists.newArrayList(listenerFactory.get(workflowContext, taskType));
+            List<String> listenerNames = listeners.stream().map(EventListener::name).collect(Collectors.toList());
+            log.info("ServiceTask: [{}] is init for listeners: {}", getName(), listenerNames);
+            addListeners(listeners);
         } else {
-            log.debug("ServiceTask:{} is already init", getName());
+            log.warn("ServiceTask [{}] was already init", getName());
         }
     }
 

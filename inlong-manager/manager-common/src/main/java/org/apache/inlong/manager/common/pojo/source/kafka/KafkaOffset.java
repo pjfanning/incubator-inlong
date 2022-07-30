@@ -28,7 +28,9 @@ public enum KafkaOffset {
 
     EARLIEST("earliest"),
     LATEST("latest"),
+    SPECIFIC("specific"),
     NONE("none");
+
 
     @Getter
     private final String name;
@@ -43,7 +45,7 @@ public enum KafkaOffset {
                 return dataFormat;
             }
         }
-        throw new IllegalArgumentException(String.format("Unsupported KafkaOffset=%s for Inlong", name));
+        throw new IllegalArgumentException(String.format("Unsupported KafkaOffset=%s", name));
     }
 
 }

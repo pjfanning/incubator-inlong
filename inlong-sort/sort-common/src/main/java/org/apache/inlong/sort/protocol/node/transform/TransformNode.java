@@ -28,15 +28,18 @@ import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonPro
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonSubTypes;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.inlong.sort.protocol.FieldInfo;
+import org.apache.inlong.sort.protocol.enums.FilterStrategy;
 import org.apache.inlong.sort.protocol.node.Node;
-import org.apache.inlong.sort.protocol.transformation.FieldRelationShip;
+import org.apache.inlong.sort.protocol.transformation.FieldRelation;
 import org.apache.inlong.sort.protocol.transformation.FilterFunction;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Base class for transform node, such as a distinct node
+ */
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         include = JsonTypeInfo.As.PROPERTY,
@@ -57,26 +60,31 @@ public class TransformNode implements Node, Serializable {
     private String name;
     @JsonProperty("fields")
     private List<FieldInfo> fields;
-    @JsonProperty("fieldRelationShips")
-    private List<FieldRelationShip> fieldRelationShips;
+    @JsonProperty("fieldRelations")
+    private List<FieldRelation> fieldRelations;
     @JsonProperty("filters")
     @JsonInclude(Include.NON_NULL)
-    private List<FilterFunction> filters = new ArrayList<>();
+    private List<FilterFunction> filters;
+    @JsonProperty("filterStrategy")
+    @JsonInclude(Include.NON_NULL)
+    private FilterStrategy filterStrategy;
 
     @JsonCreator
     public TransformNode(@JsonProperty("id") String id,
             @JsonProperty("name") String name,
             @JsonProperty("fields") List<FieldInfo> fields,
-            @JsonProperty("fieldRelationShips") List<FieldRelationShip> fieldRelationShips,
-            @JsonProperty("filters") List<FilterFunction> filters) {
+            @JsonProperty("fieldRelations") List<FieldRelation> fieldRelations,
+            @JsonProperty("filters") List<FilterFunction> filters,
+            @JsonProperty("filterStrategy") FilterStrategy filterStrategy) {
         this.id = Preconditions.checkNotNull(id, "id is null");
         this.name = name;
         this.fields = Preconditions.checkNotNull(fields, "fields is null");
         Preconditions.checkState(!fields.isEmpty(), "fields is empty");
-        this.fieldRelationShips = Preconditions.checkNotNull(fieldRelationShips,
-                "fieldRelationShips is null");
-        Preconditions.checkState(!fieldRelationShips.isEmpty(), "fieldRelationShips is empty");
+        this.fieldRelations = Preconditions.checkNotNull(fieldRelations,
+                "fieldRelations is null");
+        Preconditions.checkState(!fieldRelations.isEmpty(), "fieldRelations is empty");
         this.filters = filters;
+        this.filterStrategy = filterStrategy;
     }
 
     @JsonIgnore

@@ -21,6 +21,9 @@ import java.time.Duration;
 
 import static org.apache.inlong.sort.configuration.ConfigOptions.key;
 
+/**
+ * Constants used in sort
+ */
 public class Constants {
 
     public static final long UNKNOWN_DATAFLOW_ID = -1L;
@@ -40,6 +43,10 @@ public class Constants {
     public static final String SINK_TYPE_ICEBERG = "iceberg";
 
     public static final String SINK_TYPE_KAFKA = "kafka";
+
+    public static final String SINK_TYPE_HBASE = "hbase";
+
+    public static final String SINK_TYPE_ES = "elasticsearch";
 
     public static final String METRIC_DATA_OUTPUT_TAG_ID = "metric_data_side_output";
 
@@ -291,6 +298,9 @@ public class Constants {
 
     public static final ConfigOption<String> GROUP_INFO_FILE = key("group.info.file").noDefaultValue()
             .withDescription("The file which contains group info for a single tenant job");
+
+    public static final ConfigOption<String> SQL_SCRIPT_FILE = key("sql.script.file").noDefaultValue()
+            .withDescription("The file which is sql script and contains multi statement");
 
     // ------------------------------------------------------------------------
     //  File format and compression related

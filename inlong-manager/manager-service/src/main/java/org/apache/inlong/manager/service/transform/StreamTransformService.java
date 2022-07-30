@@ -17,6 +17,7 @@
 
 package org.apache.inlong.manager.service.transform;
 
+import org.apache.inlong.manager.common.pojo.transform.DeleteTransformRequest;
 import org.apache.inlong.manager.common.pojo.transform.TransformRequest;
 import org.apache.inlong.manager.common.pojo.transform.TransformResponse;
 
@@ -30,11 +31,11 @@ public interface StreamTransformService {
     /**
      * Save the transform information.
      *
-     * @param transformRequest the transform request
+     * @param request the transform request
      * @param operator name of the operator
      * @return transform id after saving
      */
-    Integer save(TransformRequest transformRequest, String operator);
+    Integer save(TransformRequest request, String operator);
 
     /**
      * Query transform information based on inlong group id and inlong stream id.
@@ -48,19 +49,19 @@ public interface StreamTransformService {
     /**
      * Modify data transform information.
      *
-     * @param transformRequest the transform request
+     * @param request the transform request
      * @param operator name of the operator
      * @return Whether succeed
      */
-    boolean update(TransformRequest transformRequest, String operator);
+    Boolean update(TransformRequest request, String operator);
 
     /**
      * Delete the stream transform by the given id.
      *
-     * @param groupId the inlong group id
-     * @param streamId the inlong stream id
+     * @param request delete request
      * @param operator name of the operator
      * @return Whether succeed
      */
-    boolean delete(String groupId, String streamId, String transformName, String operator);
+    Boolean delete(DeleteTransformRequest request, String operator);
+
 }

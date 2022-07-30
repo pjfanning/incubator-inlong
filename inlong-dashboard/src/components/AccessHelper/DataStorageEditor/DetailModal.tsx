@@ -76,7 +76,7 @@ const Comp: React.FC<DetailModalProps> = ({
     return {
       HIVE: {
         // Field name of the field array form
-        columnsKey: 'fieldList',
+        columnsKey: 'sinkFieldList',
         // In addition to the defaultRowTypeFields field that is populated by default, additional fields that need to be populated
         // The left is the defaultRowTypeFields field, and the right is the newly filled field
         restMapping: {
@@ -84,7 +84,7 @@ const Comp: React.FC<DetailModalProps> = ({
         },
       },
       CLICKHOUSE: {
-        columnsKey: 'fieldList',
+        columnsKey: 'sinkFieldList',
         restMapping: {
           fieldName: 'fieldName',
         },
@@ -190,7 +190,7 @@ const Comp: React.FC<DetailModalProps> = ({
         rules: [
           { required: true },
           {
-            pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/,
+            pattern: /^[a-zA-Z][a-zA-Z0-9_-]*$/,
             message: t('components.AccessHelper.StorageMetaData.SinkNameRule'),
           },
         ],
@@ -213,6 +213,7 @@ const Comp: React.FC<DetailModalProps> = ({
   const onOk = async () => {
     const values = await form.validateFields();
     delete values._showHigher; // delete front-end key
+    if (data) values.version = data.version;
     modalProps.onOk && modalProps.onOk(toSubmitVals(values));
   };
 

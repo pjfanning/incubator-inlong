@@ -28,6 +28,7 @@ import org.apache.inlong.manager.common.enums.ErrorCodeEnum;
 import org.apache.inlong.manager.common.exceptions.BusinessException;
 
 import javax.validation.constraints.NotNull;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -41,14 +42,15 @@ public class IcebergSinkDTO {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    @ApiModelProperty("Hive JDBC URL")
-    private String jdbcUrl;
+    @ApiModelProperty("Catalog type, like: HIVE, HADOOP, default is HIVE")
+    @Builder.Default
+    private String catalogType = "HIVE";
 
-    @ApiModelProperty("Username for JDBC URL")
-    private String username;
+    @ApiModelProperty("Catalog uri, such as hive metastore thrift://ip:port")
+    private String catalogUri;
 
-    @ApiModelProperty("User password")
-    private String password;
+    @ApiModelProperty("Iceberg data warehouse dir")
+    private String warehouse;
 
     @ApiModelProperty("Target database name")
     private String dbName;
@@ -62,14 +64,11 @@ public class IcebergSinkDTO {
     @ApiModelProperty("File format, support: Parquet, Orc, Avro")
     private String fileFormat;
 
-    @ApiModelProperty("Data encoding type")
-    private String dataEncoding;
+    @ApiModelProperty("Partition type, like: H-hour, D-day, W-week, M-month, O-once, R-regulation")
+    private String partitionType;
 
-    @ApiModelProperty("Data field separator")
-    private String dataSeparator;
-
-    @ApiModelProperty("Data consistency strategy, support: EXACTLY_ONCE(default), AT_LEAST_ONCE")
-    private String dataConsistency;
+    @ApiModelProperty("Primary key")
+    private String primaryKey;
 
     @ApiModelProperty("Properties for iceberg")
     private Map<String, Object> properties;
@@ -79,16 +78,14 @@ public class IcebergSinkDTO {
      */
     public static IcebergSinkDTO getFromRequest(IcebergSinkRequest request) {
         return IcebergSinkDTO.builder()
-                .jdbcUrl(request.getJdbcUrl())
-                .username(request.getUsername())
-                .password(request.getPassword())
+                .catalogUri(request.getCatalogUri())
+                .warehouse(request.getWarehouse())
                 .dbName(request.getDbName())
                 .tableName(request.getTableName())
                 .dataPath(request.getDataPath())
                 .fileFormat(request.getFileFormat())
-                .dataEncoding(request.getDataEncoding())
-                .dataSeparator(request.getDataSeparator())
-                .dataConsistency(request.getDataConsistency())
+                .catalogType(request.getCatalogType())
+                .primaryKey(request.getPrimaryKey())
                 .properties(request.getProperties())
                 .build();
     }
@@ -98,8 +95,21 @@ public class IcebergSinkDTO {
             OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             return OBJECT_MAPPER.readValue(extParams, IcebergSinkDTO.class);
         } catch (Exception e) {
-            throw new BusinessException(ErrorCodeEnum.SINK_INFO_INCORRECT.getMessage());
+            throw new BusinessException(ErrorCodeEnum.SINK_INFO_INCORRECT.getMessage() + ": " + e.getMessage());
         }
+    }
+
+    /**
+     * Get Iceberg table info
+     */
+    public static IcebergTableInfo getIcebergTableInfo(IcebergSinkDTO icebergInfo, List<IcebergColumnInfo> columnList) {
+        IcebergTableInfo info = new IcebergTableInfo();
+        info.setDbName(icebergInfo.getDbName());
+        info.setTableName(icebergInfo.getTableName());
+        info.setFileFormat(icebergInfo.getFileFormat());
+        info.setTblProperties(icebergInfo.getProperties());
+        info.setColumns(columnList);
+        return info;
     }
 
 }

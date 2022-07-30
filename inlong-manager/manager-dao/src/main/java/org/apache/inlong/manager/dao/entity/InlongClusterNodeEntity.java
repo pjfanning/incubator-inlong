@@ -22,6 +22,9 @@ import lombok.Data;
 import java.io.Serializable;
 import java.util.Date;
 
+/**
+ * Inlong cluster node entity, including parent id, type, ip, etc.
+ */
 @Data
 public class InlongClusterNodeEntity implements Serializable {
 
@@ -39,5 +42,6 @@ public class InlongClusterNodeEntity implements Serializable {
     private String modifier;
     private Date createTime;
     private Date modifyTime;
+    private Integer version;
 
 }

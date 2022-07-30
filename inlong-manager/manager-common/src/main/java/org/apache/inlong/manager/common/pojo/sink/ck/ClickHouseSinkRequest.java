@@ -27,22 +27,22 @@ import org.apache.inlong.manager.common.pojo.sink.SinkRequest;
 import org.apache.inlong.manager.common.util.JsonTypeDefine;
 
 /**
- * Request of the ClickHouse sink.
+ * ClickHouse sink request.
  */
 @Data
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-@ApiModel(value = "Request of the ClickHouse sink info")
+@ApiModel(value = "ClickHouse sink request")
 @JsonTypeDefine(value = SinkType.SINK_CLICKHOUSE)
 public class ClickHouseSinkRequest extends SinkRequest {
 
-    @ApiModelProperty("ClickHouse JDBC URL")
+    @ApiModelProperty("JDBC URL of the ClickHouse server")
     private String jdbcUrl;
 
-    @ApiModelProperty("Username for JDBC URL")
+    @ApiModelProperty("Username of the ClickHouse server")
     private String username;
 
-    @ApiModelProperty("User password")
+    @ApiModelProperty("User password of the ClickHouse server")
     private String password;
 
     @ApiModelProperty("Target database name")
@@ -52,13 +52,13 @@ public class ClickHouseSinkRequest extends SinkRequest {
     private String tableName;
 
     @ApiModelProperty("Flush interval, unit: second, default is 1s")
-    private Integer flushInterval;
+    private Integer flushInterval = 1;
 
     @ApiModelProperty("Flush when record number reaches flushRecord")
     private Integer flushRecord;
 
     @ApiModelProperty("Write max retry times, default is 3")
-    private Integer retryTimes;
+    private Integer retryTimes = 3;
 
     @ApiModelProperty("Whether distributed table? 0: no, 1: yes")
     private Integer isDistributed;
@@ -72,5 +72,17 @@ public class ClickHouseSinkRequest extends SinkRequest {
 
     @ApiModelProperty("Key field names, separate with commas")
     private String keyFieldNames;
+
+    @ApiModelProperty("ClickHouse table engine, support MergeTree Mem and so on")
+    private String engine;
+
+    @ApiModelProperty("Table partition information")
+    private String partitionBy;
+
+    @ApiModelProperty("Table order information")
+    private String orderBy;
+
+    @ApiModelProperty("Table primary key")
+    private String primaryKey;
 
 }

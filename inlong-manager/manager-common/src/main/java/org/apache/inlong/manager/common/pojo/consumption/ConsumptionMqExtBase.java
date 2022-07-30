@@ -19,7 +19,6 @@ package org.apache.inlong.manager.common.pojo.consumption;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -29,7 +28,8 @@ import lombok.Data;
  */
 @Data
 @ApiModel("Extended consumption information of different MQs")
-@JsonTypeInfo(use = Id.NAME, visible = true, property = "middlewareType", defaultImpl = ConsumptionMqExtBase.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, visible = true, property = "mqType",
+        defaultImpl = ConsumptionMqExtBase.class)
 @JsonSubTypes({
         @JsonSubTypes.Type(value = ConsumptionPulsarInfo.class, name = "PULSAR"),
         @JsonSubTypes.Type(value = ConsumptionPulsarInfo.class, name = "TDMQ_PULSAR")
@@ -51,6 +51,6 @@ public class ConsumptionMqExtBase {
     @ApiModelProperty("Whether to delete, 0: not deleted, 1: deleted")
     private Integer isDeleted = 0;
 
-    @ApiModelProperty("The middleware type of MQ")
-    private String middlewareType;
+    @ApiModelProperty("The type of MQ")
+    private String mqType;
 }

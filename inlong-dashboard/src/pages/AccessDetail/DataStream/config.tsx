@@ -21,7 +21,7 @@ import React from 'react';
 import { Divider } from 'antd';
 import i18n from '@/i18n';
 import { genBusinessFields, genDataFields } from '@/components/AccessHelper';
-import { Storages } from '@/components/MetaData';
+import { statusList } from './status';
 
 export const getFilterFormContent = (defaultValues = {} as any) => [
   {
@@ -29,12 +29,21 @@ export const getFilterFormContent = (defaultValues = {} as any) => [
     name: 'keyword',
     initialValue: defaultValues.keyword,
   },
+  {
+    type: 'select',
+    name: 'status',
+    label: i18n.t('basic.Status'),
+    props: {
+      allowClear: true,
+      options: statusList,
+    },
+  },
 ];
 
 export const genExtraContent = ({
   editingId,
   record,
-  middlewareType,
+  mqType,
   onSave,
   onCancel,
   onEdit,
@@ -67,13 +76,7 @@ export const genExtraContent = ({
       ];
 };
 
-export const genFormContent = (
-  editingId,
-  currentValues,
-  inlongGroupId,
-  readonly,
-  middlewareType,
-) => {
+export const genFormContent = (editingId, currentValues, inlongGroupId, readonly, mqType) => {
   const extraParams = {
     inlongGroupId,
     useDataSourcesActionRequest: !!currentValues?.id,
@@ -82,10 +85,12 @@ export const genFormContent = (
     readonly,
   };
 
+  const isCreate = editingId === true;
+
   return [
     ...genDataFields(
       [
-        {
+        isCreate && {
           type: (
             <Divider orientation="left">
               {i18n.t('pages.AccessCreate.DataStream.config.Basic')}
@@ -96,93 +101,87 @@ export const genFormContent = (
         {
           label: 'Topic Name',
           type: 'text',
-          name: 'mqResourceObj',
-          visible: middlewareType === 'PULSAR' && editingId !== true,
+          name: 'mqResource',
+          visible: mqType === 'PULSAR' && editingId !== true,
         },
         'name',
         'description',
-        {
-          type: (
-            <Divider orientation="left">
-              {i18n.t('pages.AccessCreate.DataStream.config.DataSources')}
-            </Divider>
-          ),
-        },
-        'dataSourceType',
-        'dataSourcesConfig',
-        {
+        isCreate && {
           type: (
             <Divider orientation="left">
               {i18n.t('pages.AccessCreate.DataStream.config.DataInfo')}
             </Divider>
           ),
         },
-        'dataType',
-        'dataEncoding',
-        'dataSeparator',
-        'rowTypeFields',
-        {
+        isCreate && 'dataType',
+        isCreate && 'dataEncoding',
+        isCreate && 'dataSeparator',
+        isCreate && 'rowTypeFields',
+        isCreate && {
           type: (
             <Divider orientation="left">
               {i18n.t('pages.AccessCreate.Business.config.AccessScale')}
             </Divider>
           ),
-          visible: middlewareType === 'PULSAR',
+          visible: mqType === 'PULSAR',
         },
       ],
       currentValues,
       extraParams,
     ),
     ...genBusinessFields(['dailyRecords', 'dailyStorage', 'peakRecords', 'maxLength']).map(
-      item => ({
-        ...item,
-        visible: middlewareType === 'PULSAR',
-      }),
-    ),
-    ...genDataFields(
-      [
-        {
-          type: (
-            <Divider orientation="left">
-              {i18n.t('pages.AccessCreate.DataStream.config.DataStorages')}
-            </Divider>
-          ),
+      item =>
+        isCreate && {
+          ...item,
+          visible: mqType === 'PULSAR',
         },
-        'streamSink',
-        ...Storages.map(item => `streamSink${item.value}`),
-      ],
-      currentValues,
-      extraParams,
     ),
-  ].map(item => {
-    if (
-      (editingId === true && currentValues?.id === undefined) ||
-      (item.name === 'streamSink' && !readonly)
-    ) {
-      return item;
-    }
-
-    const obj = { ...item };
-
-    if (!editingId || editingId !== currentValues?.id) {
-      // Nothing is being edited, or the current line is not being edited
-      delete obj.extra;
-      delete obj.rules;
-      if (typeof obj.type === 'string') {
-        obj.type = 'text';
-        obj.props = { options: obj.props?.options };
+    // ...genDataFields(
+    //   [
+    //     {
+    //       type: (
+    //         <Divider orientation="left">
+    //           {i18n.t('pages.AccessCreate.DataStream.config.DataStorages')}
+    //         </Divider>
+    //       ),
+    //     },
+    //     'streamSink',
+    //     ...Storages.map(item => `streamSink${item.value}`),
+    //   ],
+    //   currentValues,
+    //   extraParams,
+    // ),
+  ]
+    .filter(Boolean)
+    .map(item => {
+      if (
+        (editingId === true && currentValues?.id === undefined) ||
+        (item.name === 'streamSink' && !readonly)
+      ) {
+        return item;
       }
 
-      if ((obj.suffix as any)?.type) {
-        (obj.suffix as any).type = 'text';
-      }
-    } else {
-      // Current edit line
-      if (['inlongStreamId', 'dataSourceType', 'dataType'].includes(obj.name as string)) {
-        obj.type = 'text';
-      }
-    }
+      const obj = { ...item };
 
-    return obj;
-  });
+      if (!editingId || editingId !== currentValues?.id) {
+        // Nothing is being edited, or the current line is not being edited
+        delete obj.extra;
+        delete obj.rules;
+        if (typeof obj.type === 'string') {
+          obj.type = 'text';
+          obj.props = { options: obj.props?.options };
+        }
+
+        if ((obj.suffix as any)?.type) {
+          (obj.suffix as any).type = 'text';
+        }
+      } else {
+        // Current edit line
+        if (['inlongStreamId', 'dataSourceType', 'dataType'].includes(obj.name as string)) {
+          obj.type = 'text';
+        }
+      }
+
+      return obj;
+    });
 };

@@ -21,17 +21,16 @@ import com.google.common.collect.Maps;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.commons.collections.MapUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.inlong.manager.client.api.InlongStream;
-import org.apache.inlong.manager.client.api.util.AssertUtil;
-import org.apache.inlong.manager.common.pojo.group.InlongGroupApproveRequest;
 import org.apache.inlong.manager.common.pojo.group.InlongGroupInfo;
-import org.apache.inlong.manager.common.pojo.stream.InlongStreamApproveRequest;
+import org.apache.inlong.manager.common.pojo.workflow.form.process.ApplyGroupProcessForm;
+import org.apache.inlong.manager.common.util.Preconditions;
 
-import java.util.List;
 import java.util.Map;
 
+/**
+ * InnerGroupContext.
+ */
 @Data
 @NoArgsConstructor
 public class InnerGroupContext {
@@ -42,16 +41,16 @@ public class InnerGroupContext {
 
     private Map<String, InlongStream> streamMap = Maps.newHashMap();
 
-    private Pair<InlongGroupApproveRequest, List<InlongStreamApproveRequest>> initMsg;
+    private ApplyGroupProcessForm initMsg;
 
     public String getGroupId() {
-        AssertUtil.notNull(groupInfo, "InlongGroupRequest is not init");
+        Preconditions.checkNotNull(groupInfo, "inlong group info was not init");
         return groupInfo.getInlongGroupId();
     }
 
     public void setStreamContext(InnerStreamContext streamContext) {
-        AssertUtil.isTrue(streamContext != null && streamContext.getStreamInfo() != null,
-                "StreamContext should not be null");
+        Preconditions.checkTrue(streamContext != null && streamContext.getStreamInfo() != null,
+                "stream context cannot be null");
         if (MapUtils.isEmpty(streamContextMap)) {
             streamContextMap = Maps.newHashMap();
         }
@@ -59,20 +58,11 @@ public class InnerGroupContext {
     }
 
     public void setStream(InlongStream stream) {
-        AssertUtil.isTrue(stream != null,
-                "Stream should not be null");
+        Preconditions.checkTrue(stream != null, "stream cannot be null");
         if (MapUtils.isEmpty(streamMap)) {
             streamMap = Maps.newHashMap();
         }
-        streamMap.put(stream.getName(), stream);
+        streamMap.put(stream.getInlongStreamId(), stream);
     }
 
-    public InlongStream getStream(String name) {
-        AssertUtil.isTrue(StringUtils.isNotEmpty(name),
-                "Stream name should not be null");
-        if (MapUtils.isNotEmpty(streamMap)) {
-            return streamMap.get(name);
-        }
-        return null;
-    }
 }

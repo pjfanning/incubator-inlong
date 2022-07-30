@@ -18,8 +18,11 @@
 package org.apache.inlong.manager.dao.mapper;
 
 import org.apache.ibatis.annotations.Param;
+import org.apache.inlong.manager.common.pojo.sortstandalone.SortIdInfo;
+import org.apache.inlong.manager.common.pojo.sortstandalone.SortSourceStreamInfo;
+import org.apache.inlong.manager.common.pojo.sortstandalone.SortTaskInfo;
+import org.apache.inlong.manager.common.pojo.sink.SinkBriefInfo;
 import org.apache.inlong.manager.common.pojo.sink.SinkInfo;
-import org.apache.inlong.manager.common.pojo.sink.SinkBriefResponse;
 import org.apache.inlong.manager.common.pojo.sink.SinkPageRequest;
 import org.apache.inlong.manager.dao.entity.StreamSinkEntity;
 import org.springframework.stereotype.Repository;
@@ -55,7 +58,7 @@ public interface StreamSinkEntityMapper {
     /**
      * Query the sink summary from the given groupId and streamId
      */
-    List<SinkBriefResponse> selectSummary(@Param("groupId") String groupId,
+    List<SinkBriefInfo> selectSummary(@Param("groupId") String groupId,
             @Param("streamId") String streamId);
 
     /**
@@ -63,9 +66,11 @@ public interface StreamSinkEntityMapper {
      *
      * @param groupId Inlong group id.
      * @param streamId Inlong stream id.
+     * @param sinkName Stream sink name.
      * @return Sink entity list.
      */
-    List<StreamSinkEntity> selectByRelatedId(@Param("groupId") String groupId, @Param("streamId") String streamId);
+    List<StreamSinkEntity> selectByRelatedId(@Param("groupId") String groupId, @Param("streamId") String streamId,
+            @Param("sinkName") String sinkName);
 
     /**
      * According to the group id, stream id and sink type, query valid sink entity list.
@@ -81,10 +86,10 @@ public interface StreamSinkEntityMapper {
     /**
      * Filter stream ids with the specified groupId and sinkType from the given stream id list.
      *
-     * @param groupId InLong group id.
+     * @param groupId Inlong group id.
      * @param sinkType Sink type.
-     * @param streamIdList InLong stream id list.
-     * @return List of InLong stream id with the given sink type
+     * @param streamIdList Inlong stream id list.
+     * @return List of Inlong stream id with the given sink type
      */
     List<String> selectExistsStreamId(@Param("groupId") String groupId, @Param("sinkType") String sinkType,
             @Param("streamIdList") List<String> streamIdList);
@@ -110,5 +115,26 @@ public interface StreamSinkEntityMapper {
     int updateStatus(StreamSinkEntity entity);
 
     int deleteByPrimaryKey(Integer id);
+
+    /**
+     * Select all tasks for sort-standalone
+     *
+     * @return All tasks
+     */
+    List<SortTaskInfo> selectAllTasks();
+
+    /**
+     * Select all id params for sort-standalone
+     *
+     * @return All id params
+     */
+    List<SortIdInfo> selectAllIdParams();
+
+    /**
+     * Select all streams for sort sdk.
+     *
+     * @return All stream info
+     */
+    List<SortSourceStreamInfo> selectAllStreams();
 
 }

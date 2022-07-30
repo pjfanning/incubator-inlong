@@ -18,49 +18,66 @@
 package org.apache.inlong.manager.common.pojo.source;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
-import org.apache.inlong.manager.common.pojo.stream.InlongStreamFieldInfo;
+import org.apache.inlong.manager.common.pojo.common.UpdateValidation;
+import org.apache.inlong.manager.common.pojo.stream.StreamField;
+import org.hibernate.validator.constraints.Length;
 
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Request of source
+ * Stream source request
  */
 @Data
-@ApiModel("Request of source")
-@JsonTypeInfo(use = Id.NAME, visible = true, property = "sourceType")
+@ApiModel("Stream source request")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, visible = true, property = "sourceType")
 public class SourceRequest {
 
+    @NotNull(groups = UpdateValidation.class)
+    @ApiModelProperty(value = "Primary key")
     private Integer id;
 
-    @NotNull
+    @NotBlank(message = "inlongGroupId cannot be blank")
     @ApiModelProperty("Inlong group id")
     private String inlongGroupId;
 
-    @NotNull
+    @NotBlank(message = "inlongStreamId cannot be blank")
     @ApiModelProperty("Inlong stream id")
     private String inlongStreamId;
 
-    @NotNull
+    @NotBlank(message = "sourceType cannot be blank")
     @ApiModelProperty("Source type, including: FILE, KAFKA, etc.")
     private String sourceType;
 
-    @NotNull
+    @NotBlank(message = "sourceName cannot be blank")
+    @Length(min = 1, max = 100, message = "sourceName length must be between 1 and 100")
+    @Pattern(regexp = "^[a-z0-9_-]{1,100}$",
+            message = "sourceName only supports lowercase letters, numbers, '-', or '_'")
     @ApiModelProperty("Source name, unique in one stream")
     private String sourceName;
+
+    @ApiModelProperty("Ip of the agent running the task")
+    private String agentIp;
 
     @ApiModelProperty("Mac uuid of the agent running the task")
     private String uuid;
 
-    @ApiModelProperty("Data node name")
-    private String dataNodeName;
-
+    @Deprecated
     @ApiModelProperty("Id of the cluster that collected this source")
     private Integer clusterId;
+
+    @ApiModelProperty("Inlong cluster name")
+    private String inlongClusterName;
+
+    @ApiModelProperty("Data node name")
+    private String dataNodeName;
 
     @ApiModelProperty("Serialization type, support: csv, json, canal, avro, etc")
     private String serializationType;
@@ -72,6 +89,9 @@ public class SourceRequest {
     private Integer version;
 
     @ApiModelProperty("Field list, only support when inlong group in light weight mode")
-    private List<InlongStreamFieldInfo> fieldList;
+    private List<StreamField> fieldList;
+
+    @ApiModelProperty("Other properties if needed")
+    private Map<String, Object> properties = new LinkedHashMap<>();
 
 }

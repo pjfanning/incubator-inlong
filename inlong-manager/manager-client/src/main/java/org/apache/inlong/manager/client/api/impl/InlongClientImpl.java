@@ -28,22 +28,35 @@ import org.apache.commons.collections.MapUtils;
 import org.apache.inlong.manager.client.api.ClientConfiguration;
 import org.apache.inlong.manager.client.api.InlongClient;
 import org.apache.inlong.manager.client.api.InlongGroup;
-import org.apache.inlong.manager.client.api.InlongGroupConf;
-import org.apache.inlong.manager.client.api.InlongGroupContext.InlongGroupState;
-import org.apache.inlong.manager.common.pojo.stream.StreamSource.State;
-import org.apache.inlong.manager.client.api.inner.InnerInlongManagerClient;
-import org.apache.inlong.manager.client.api.util.InlongGroupTransfer;
-import org.apache.inlong.manager.common.beans.Response;
-import org.apache.inlong.manager.common.pojo.group.InlongGroupListResponse;
+import org.apache.inlong.manager.client.api.enums.SimpleGroupStatus;
+import org.apache.inlong.manager.client.api.enums.SimpleSourceStatus;
+import org.apache.inlong.manager.client.api.inner.client.ClientFactory;
+import org.apache.inlong.manager.client.api.inner.client.InlongClusterClient;
+import org.apache.inlong.manager.client.api.inner.client.InlongGroupClient;
+import org.apache.inlong.manager.client.api.util.ClientUtils;
+import org.apache.inlong.manager.common.pojo.cluster.BindTagRequest;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterInfo;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterNodeRequest;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterNodeResponse;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterPageRequest;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterRequest;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterTagPageRequest;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterTagRequest;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterTagResponse;
+import org.apache.inlong.manager.common.pojo.group.InlongGroupBriefInfo;
+import org.apache.inlong.manager.common.pojo.group.InlongGroupInfo;
 import org.apache.inlong.manager.common.pojo.group.InlongGroupPageRequest;
-import org.apache.inlong.manager.common.pojo.group.InlongGroupResponse;
-import org.apache.inlong.manager.common.pojo.source.SourceListResponse;
+import org.apache.inlong.manager.common.pojo.source.StreamSource;
 import org.apache.inlong.manager.common.util.HttpUtils;
+import org.apache.inlong.manager.common.util.Preconditions;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Inlong client service implementation.
+ */
 @Slf4j
 public class InlongClientImpl implements InlongClient {
 
@@ -51,12 +64,14 @@ public class InlongClientImpl implements InlongClient {
     private static final String HOST_SPLITTER = ":";
     @Getter
     private final ClientConfiguration configuration;
+    private final InlongGroupClient groupClient;
+    private final InlongClusterClient clusterClient;
 
     public InlongClientImpl(String serviceUrl, ClientConfiguration configuration) {
         Map<String, String> hostPorts = Splitter.on(URL_SPLITTER).withKeyValueSeparator(HOST_SPLITTER)
                 .split(serviceUrl);
         if (MapUtils.isEmpty(hostPorts)) {
-            throw new IllegalArgumentException(String.format("Unsupported serviceUrl : %s", serviceUrl));
+            throw new IllegalArgumentException(String.format("Unsupported serviceUrl: %s", serviceUrl));
         }
         configuration.setServiceUrl(serviceUrl);
         boolean isConnective = false;
@@ -74,104 +89,191 @@ public class InlongClientImpl implements InlongClient {
             throw new RuntimeException(String.format("%s is not connective", serviceUrl));
         }
         this.configuration = configuration;
+        ClientFactory clientFactory = ClientUtils.getClientFactory(configuration);
+        groupClient = clientFactory.getGroupClient();
+        clusterClient = clientFactory.getClusterClient();
     }
 
     @Override
-    public InlongGroup forGroup(InlongGroupConf groupConf) {
-        return new InlongGroupImpl(groupConf, this);
+    public InlongGroup forGroup(InlongGroupInfo groupInfo) {
+        return new InlongGroupImpl(groupInfo, configuration);
     }
 
     @Override
     public List<InlongGroup> listGroup(String expr, int status, int pageNum, int pageSize) {
-        InnerInlongManagerClient managerClient = new InnerInlongManagerClient(this.configuration);
-        PageInfo<InlongGroupListResponse> responsePageInfo = managerClient.listGroups(expr, status, pageNum,
+        PageInfo<InlongGroupBriefInfo> pageInfo = groupClient.listGroups(expr, status, pageNum,
                 pageSize);
-        if (CollectionUtils.isEmpty(responsePageInfo.getList())) {
+        if (CollectionUtils.isEmpty(pageInfo.getList())) {
             return Lists.newArrayList();
         } else {
-            return responsePageInfo.getList().stream().map(response -> {
-                String groupId = response.getInlongGroupId();
-                InlongGroupResponse groupResponse = managerClient.getGroupInfo(groupId);
-                InlongGroupConf groupConf = InlongGroupTransfer.parseGroupResponse(groupResponse);
-                return new InlongGroupImpl(groupConf, this);
+            return pageInfo.getList().stream().map(briefInfo -> {
+                String groupId = briefInfo.getInlongGroupId();
+                InlongGroupInfo groupInfo = groupClient.getGroupInfo(groupId);
+                return new InlongGroupImpl(groupInfo, configuration);
             }).collect(Collectors.toList());
         }
     }
 
-    /**
-     * List group state
-     *
-     * @param groupNames
-     * @return
-     * @throws Exception
-     */
     @Override
-    public Map<String, InlongGroupState> listGroupState(List<String> groupNames) throws Exception {
-        InnerInlongManagerClient managerClient = new InnerInlongManagerClient(this.configuration);
+    public Map<String, SimpleGroupStatus> listGroupStatus(List<String> groupIds) {
         InlongGroupPageRequest request = new InlongGroupPageRequest();
-        request.setNameList(groupNames);
-        request.setPageNum(1);
-        request.setPageSize(groupNames.size());
+        request.setGroupIdList(groupIds);
         request.setListSources(true);
-        Response<PageInfo<InlongGroupListResponse>> pageInfoResponse = managerClient.listGroups(request);
-        if (!pageInfoResponse.isSuccess() || pageInfoResponse.getErrMsg() != null) {
-            throw new RuntimeException("listGroupStateFailed:" + pageInfoResponse.getErrMsg());
+
+        PageInfo<InlongGroupBriefInfo> pageInfo = groupClient.listGroups(request);
+        List<InlongGroupBriefInfo> briefInfos = pageInfo.getList();
+        Map<String, SimpleGroupStatus> groupStatusMap = Maps.newHashMap();
+        if (CollectionUtils.isNotEmpty(briefInfos)) {
+            briefInfos.forEach(briefInfo -> {
+                String groupId = briefInfo.getInlongGroupId();
+                SimpleGroupStatus groupStatus = SimpleGroupStatus.parseStatusByCode(briefInfo.getStatus());
+                List<StreamSource> sources = briefInfo.getStreamSources();
+                groupStatus = recheckGroupStatus(groupStatus, sources);
+                groupStatusMap.put(groupId, groupStatus);
+            });
         }
-        List<InlongGroupListResponse> groupListResponses = pageInfoResponse.getData().getList();
-        Map<String, InlongGroupState> groupStateMap = Maps.newHashMap();
-        groupListResponses.stream().forEach(groupListResponse -> {
-            String groupId = groupListResponse.getInlongGroupId();
-            InlongGroupState groupState = InlongGroupState.parseByBizStatus(groupListResponse.getStatus());
-            List<SourceListResponse> sourceListResponses = groupListResponse.getSourceListResponses();
-            groupState = recheckGroupState(groupState, sourceListResponses);
-            groupStateMap.put(groupId, groupState);
-        });
-        return groupStateMap;
+        return groupStatusMap;
     }
 
     @Override
-    public InlongGroup getGroup(String groupName) {
-        InnerInlongManagerClient managerClient = new InnerInlongManagerClient(this.configuration);
-        final String groupId = "b_" + groupName;
-        InlongGroupResponse groupResponse = managerClient.getGroupInfo(groupId);
-        if (groupResponse == null) {
+    public InlongGroup getGroup(String groupId) {
+        InlongGroupInfo groupInfo = groupClient.getGroupInfo(groupId);
+        if (groupInfo == null) {
             return new BlankInlongGroup();
         }
-        InlongGroupConf groupConf = InlongGroupTransfer.parseGroupResponse(groupResponse);
-        return new InlongGroupImpl(groupConf, this);
+        return new InlongGroupImpl(groupInfo, configuration);
     }
 
-    private InlongGroupState recheckGroupState(InlongGroupState groupState,
-            List<SourceListResponse> sourceListResponses) {
-        Map<State, List<SourceListResponse>> stateListMap = Maps.newHashMap();
-        sourceListResponses.stream().forEach(sourceListResponse -> {
-            State state = State.parseByStatus(sourceListResponse.getStatus());
-            stateListMap.computeIfAbsent(state, k -> Lists.newArrayList()).add(sourceListResponse);
+    @Override
+    public Integer saveTag(ClusterTagRequest request) {
+        Preconditions.checkNotNull(request, "inlong cluster request cannot be empty");
+        Preconditions.checkNotNull(request.getClusterTag(), "cluster tag cannot be empty");
+        return clusterClient.saveTag(request);
+    }
+
+    @Override
+    public ClusterTagResponse getTag(Integer id) {
+        Preconditions.checkNotNull(id, "inlong cluster tag id cannot be empty");
+        return clusterClient.getTag(id);
+    }
+
+    @Override
+    public PageInfo<ClusterTagResponse> listTag(ClusterTagPageRequest request) {
+        return clusterClient.listTag(request);
+    }
+
+    @Override
+    public Boolean updateTag(ClusterTagRequest request) {
+        Preconditions.checkNotNull(request, "inlong cluster request cannot be empty");
+        Preconditions.checkNotNull(request.getClusterTag(), "inlong cluster tag cannot be empty");
+        Preconditions.checkNotNull(request.getId(), "cluster tag id cannot be empty");
+        return clusterClient.updateTag(request);
+    }
+
+    @Override
+    public Boolean deleteTag(Integer id) {
+        Preconditions.checkNotNull(id, "cluster tag id cannot be empty");
+        return clusterClient.deleteTag(id);
+    }
+
+    @Override
+    public Integer saveCluster(ClusterRequest request) {
+        Preconditions.checkNotNull(request, "inlong cluster request cannot be empty");
+        return clusterClient.saveCluster(request);
+    }
+
+    @Override
+    public ClusterInfo get(Integer id) {
+        Preconditions.checkNotNull(id, "inlong cluster id cannot be empty");
+        return clusterClient.get(id);
+    }
+
+    @Override
+    public ClusterInfo list(ClusterPageRequest request) {
+        return clusterClient.list(request);
+    }
+
+    @Override
+    public Boolean update(ClusterRequest request) {
+        Preconditions.checkNotNull(request, "inlong cluster info cannot be empty");
+        Preconditions.checkNotNull(request.getId(), "inlong cluster id cannot be empty");
+        return clusterClient.update(request);
+    }
+
+    @Override
+    public Boolean bindTag(BindTagRequest request) {
+        Preconditions.checkNotNull(request, "inlong cluster info cannot be empty");
+        Preconditions.checkNotNull(request.getClusterTag(), "cluster tag cannot be empty");
+        return clusterClient.bindTag(request);
+    }
+
+    @Override
+    public Boolean delete(Integer id) {
+        Preconditions.checkNotNull(id, "cluster id cannot be empty");
+        return clusterClient.delete(id);
+    }
+
+    @Override
+    public Integer saveNode(ClusterNodeRequest request) {
+        Preconditions.checkNotNull(request, "cluster node info cannot be empty");
+        return clusterClient.saveNode(request);
+    }
+
+    @Override
+    public ClusterNodeResponse getNode(Integer id) {
+        Preconditions.checkNotNull(id, "cluster node id cannot be empty");
+        return clusterClient.getNode(id);
+    }
+
+    @Override
+    public PageInfo<ClusterNodeResponse> listNode(ClusterPageRequest request) {
+        Preconditions.checkNotNull(request.getParentId(), "Cluster id cannot be empty");
+        return clusterClient.listNode(request);
+    }
+
+    @Override
+    public Boolean updateNode(ClusterNodeRequest request) {
+        Preconditions.checkNotNull(request, "inlong cluster node cannot be empty");
+        Preconditions.checkNotNull(request.getId(), "cluster node id cannot be empty");
+        return clusterClient.updateNode(request);
+    }
+
+    @Override
+    public Boolean deleteNode(Integer id) {
+        Preconditions.checkNotNull(id, "cluster node id cannot be empty");
+        return clusterClient.deleteNode(id);
+    }
+
+    private SimpleGroupStatus recheckGroupStatus(SimpleGroupStatus groupStatus, List<StreamSource> sources) {
+        Map<SimpleSourceStatus, List<StreamSource>> statusListMap = Maps.newHashMap();
+        sources.forEach(source -> {
+            SimpleSourceStatus status = SimpleSourceStatus.parseByStatus(source.getStatus());
+            statusListMap.computeIfAbsent(status, k -> Lists.newArrayList()).add(source);
         });
-        if (CollectionUtils.isNotEmpty(stateListMap.get(State.FAILED))) {
-            return InlongGroupState.FAILED;
+        if (CollectionUtils.isNotEmpty(statusListMap.get(SimpleSourceStatus.FAILED))) {
+            return SimpleGroupStatus.FAILED;
         }
-        switch (groupState) {
+        switch (groupStatus) {
             case STARTED:
-                if (CollectionUtils.isNotEmpty(stateListMap.get(State.INIT))) {
-                    return InlongGroupState.INITIALIZING;
+                if (CollectionUtils.isNotEmpty(statusListMap.get(SimpleSourceStatus.INIT))) {
+                    return SimpleGroupStatus.INITIALIZING;
                 } else {
-                    return groupState;
+                    return groupStatus;
                 }
             case STOPPED:
-                if (CollectionUtils.isNotEmpty(stateListMap.get(State.FROZING))) {
-                    return InlongGroupState.OPERATING;
+                if (CollectionUtils.isNotEmpty(statusListMap.get(SimpleSourceStatus.FREEZING))) {
+                    return SimpleGroupStatus.OPERATING;
                 } else {
-                    return groupState;
+                    return groupStatus;
                 }
             case DELETED:
-                if (CollectionUtils.isNotEmpty(stateListMap.get(State.DELETING))) {
-                    return InlongGroupState.OPERATING;
+                if (CollectionUtils.isNotEmpty(statusListMap.get(SimpleSourceStatus.DELETING))) {
+                    return SimpleGroupStatus.OPERATING;
                 } else {
-                    return groupState;
+                    return groupStatus;
                 }
             default:
-                return groupState;
+                return groupStatus;
         }
     }
 }

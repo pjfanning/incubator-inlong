@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+{{- if .Values.components.tubemqServer }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -155,11 +156,11 @@ spec:
           configMap:
             name: {{ template "inlong.fullname" . }}-{{ .Values.tubemqBroker.component }}-ini
             defaultMode: 0644
-        {{- if not .Values.volumes.persistence }}
+        {{- if not .Values.tubemqBroker.volumes.persistence }}
         - name: {{ template "inlong.fullname" . }}-{{ .Values.tubemqBroker.component }}-{{ .Values.tubemqBroker.volumes.name }}
           emptyDir: {}
         {{- end }}
-  {{- if .Values.volumes.persistence }}
+  {{- if .Values.tubemqBroker.volumes.persistence }}
   volumeClaimTemplates:
     - metadata:
         name: {{ template "inlong.fullname" . }}-{{ .Values.tubemqBroker.component }}-{{ .Values.tubemqBroker.volumes.name }}
@@ -168,7 +169,8 @@ spec:
         resources:
           requests:
             storage: {{ .Values.tubemqBroker.volumes.size }}
-        {{- if .Values.volumes.storageClassName }}
-        storageClassName: "{{ .Values.volumes.storageClassName }}"
+        {{- if .Values.tubemqBroker.volumes.storageClassName }}
+        storageClassName: "{{ .Values.tubemqBroker.volumes.storageClassName }}"
         {{- end }}
   {{- end }}
+{{- end }}

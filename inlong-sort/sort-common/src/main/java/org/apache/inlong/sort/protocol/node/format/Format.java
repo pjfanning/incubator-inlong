@@ -24,6 +24,10 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
+
+/**
+ * Interface class for data format
+ */
 @JsonTypeInfo(
         use = JsonTypeInfo.Id.NAME,
         include = JsonTypeInfo.As.PROPERTY,
@@ -33,7 +37,8 @@ import java.util.Map;
         @JsonSubTypes.Type(value = AvroFormat.class, name = "avroFormat"),
         @JsonSubTypes.Type(value = DebeziumJsonFormat.class, name = "debeziumJsonFormat"),
         @JsonSubTypes.Type(value = CanalJsonFormat.class, name = "canalJsonFormat"),
-        @JsonSubTypes.Type(value = CsvFormat.class, name = "csvFormat")
+        @JsonSubTypes.Type(value = CsvFormat.class, name = "csvFormat"),
+        @JsonSubTypes.Type(value = InLongMsgFormat.class, name = "inLongMsgFormat")
 })
 public interface Format extends Serializable {
 

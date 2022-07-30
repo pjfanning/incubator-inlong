@@ -17,8 +17,18 @@
 
 package org.apache.inlong.agent.plugin.sources.reader;
 
-import static org.apache.inlong.agent.constant.JobConstants.DEFAULT_JOB_FILE_MAX_WAIT;
-import static org.apache.inlong.agent.constant.JobConstants.JOB_FILE_MAX_WAIT;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.inlong.agent.conf.JobProfile;
+import org.apache.inlong.agent.message.DefaultMessage;
+import org.apache.inlong.agent.metrics.audit.AuditUtils;
+import org.apache.inlong.agent.plugin.Message;
+import org.apache.inlong.agent.plugin.Validator;
+import org.apache.inlong.agent.plugin.except.FileException;
+import org.apache.inlong.agent.plugin.metrics.GlobalMetrics;
+import org.apache.inlong.agent.plugin.validator.PatternValidator;
+import org.apache.inlong.agent.utils.AgentUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -29,26 +39,17 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.inlong.agent.conf.JobProfile;
-import org.apache.inlong.agent.message.DefaultMessage;
-import org.apache.inlong.agent.metrics.audit.AuditUtils;
-import org.apache.inlong.agent.plugin.Message;
-import org.apache.inlong.agent.plugin.Validator;
-import org.apache.inlong.agent.plugin.except.FileException;
-import org.apache.inlong.agent.plugin.validator.PatternValidator;
-import org.apache.inlong.agent.utils.AgentUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.apache.inlong.agent.constant.JobConstants.DEFAULT_JOB_FILE_MAX_WAIT;
+import static org.apache.inlong.agent.constant.JobConstants.JOB_FILE_MAX_WAIT;
 
+/**
+ * read file data
+ */
 public class TextFileReader extends AbstractReader {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(TextFileReader.class);
-
-    private static final String TEXT_FILE_READER_TAG_NAME = "AgentTextMetric";
-
     public static final int NEVER_STOP_SIGN = -1;
-
+    private static final Logger LOGGER = LoggerFactory.getLogger(TextFileReader.class);
+    private static final String TEXT_FILE_READER_TAG_NAME = "AgentTextMetric";
     private final File file;
 
     private final int position;
@@ -88,10 +89,7 @@ public class TextFileReader extends AbstractReader {
             if (validateMessage(message)) {
                 AuditUtils.add(AuditUtils.AUDIT_ID_AGENT_READ_SUCCESS,
                         inlongGroupId, inlongStreamId, System.currentTimeMillis());
-                if (streamMetric != null) {
-                    readerMetric.incReadNum();
-                    streamMetric.incReadNum();
-                }
+                GlobalMetrics.incReadNum(metricTagName);
                 return new DefaultMessage(message.getBytes(StandardCharsets.UTF_8));
             }
         }
@@ -136,7 +134,7 @@ public class TextFileReader extends AbstractReader {
     }
 
     @Override
-    public void setWaitMillisecs(long millis) {
+    public void setWaitMillisecond(long millis) {
         waitTimeout = millis;
     }
 
@@ -166,7 +164,7 @@ public class TextFileReader extends AbstractReader {
     public void init(JobProfile jobConf) {
         try {
             super.init(jobConf);
-            intMetric(TEXT_FILE_READER_TAG_NAME);
+            metricTagName = TEXT_FILE_READER_TAG_NAME + "_" + inlongGroupId;
             initReadTimeout(jobConf);
             String md5 = AgentUtils.getFileMd5(file);
             if (StringUtils.isNotBlank(this.md5) && !this.md5.equals(md5)) {
@@ -197,6 +195,6 @@ public class TextFileReader extends AbstractReader {
         }
         AgentUtils.finallyClose(stream);
         LOGGER.info("destroy reader with read {} num {}",
-            streamMetric.getTagName(), streamMetric.getReadNum());
+                metricTagName, GlobalMetrics.getReadNum(metricTagName));
     }
 }

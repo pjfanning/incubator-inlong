@@ -18,13 +18,13 @@
 package org.apache.inlong.manager.service.workflow.group;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.inlong.manager.common.pojo.workflow.form.GroupResourceProcessForm;
-import org.apache.inlong.manager.service.workflow.ProcessName;
-import org.apache.inlong.manager.service.workflow.ServiceTaskListenerFactory;
+import org.apache.inlong.manager.common.enums.ProcessName;
+import org.apache.inlong.manager.common.pojo.workflow.form.process.GroupResourceProcessForm;
 import org.apache.inlong.manager.service.workflow.WorkflowDefinition;
-import org.apache.inlong.manager.service.workflow.group.listener.GroupCompleteProcessListener;
-import org.apache.inlong.manager.service.workflow.group.listener.GroupFailedProcessListener;
-import org.apache.inlong.manager.service.workflow.group.listener.GroupInitProcessListener;
+import org.apache.inlong.manager.service.listener.group.InitGroupCompleteListener;
+import org.apache.inlong.manager.service.listener.group.InitGroupFailedListener;
+import org.apache.inlong.manager.service.listener.group.InitGroupListener;
+import org.apache.inlong.manager.service.listener.GroupTaskListenerFactory;
 import org.apache.inlong.manager.workflow.definition.EndEvent;
 import org.apache.inlong.manager.workflow.definition.ServiceTask;
 import org.apache.inlong.manager.workflow.definition.ServiceTaskType;
@@ -41,75 +41,77 @@ import org.springframework.stereotype.Component;
 public class CreateGroupWorkflowDefinition implements WorkflowDefinition {
 
     @Autowired
-    private GroupInitProcessListener groupInitProcessListener;
+    private InitGroupListener initGroupListener;
     @Autowired
-    private GroupCompleteProcessListener groupCompleteProcessListener;
+    private InitGroupCompleteListener initGroupCompleteListener;
     @Autowired
-    private GroupFailedProcessListener groupFailedProcessListener;
+    private InitGroupFailedListener initGroupFailedListener;
     @Autowired
-    private ServiceTaskListenerFactory serviceTaskListenerFactory;
+    private GroupTaskListenerFactory groupTaskListenerFactory;
 
     @Override
     public WorkflowProcess defineProcess() {
-
         // Configuration process
         WorkflowProcess process = new WorkflowProcess();
-        process.addListener(groupInitProcessListener);
-        process.addListener(groupCompleteProcessListener);
-        process.addListener(groupFailedProcessListener);
-
-        process.setType("Group Resource Creation");
         process.setName(getProcessName().name());
+        process.setType(getProcessName().getDisplayName());
         process.setDisplayName(getProcessName().getDisplayName());
         process.setFormClass(GroupResourceProcessForm.class);
         process.setVersion(1);
         process.setHidden(1);
 
+        // Set up the listener
+        process.addListener(initGroupListener);
+        process.addListener(initGroupCompleteListener);
+        process.addListener(initGroupFailedListener);
+
         // Start node
         StartEvent startEvent = new StartEvent();
         process.setStartEvent(startEvent);
 
-        // init DataSource
-        ServiceTask initDataSourceTask = new ServiceTask();
-        initDataSourceTask.setName("initSource");
-        initDataSourceTask.setDisplayName("Group-InitSource");
-        initDataSourceTask.addServiceTaskType(ServiceTaskType.INIT_SOURCE);
-        initDataSourceTask.addListenerProvider(serviceTaskListenerFactory);
-        process.addTask(initDataSourceTask);
+        // Init MQ
+        ServiceTask initMQTask = new ServiceTask();
+        initMQTask.setName("InitMQ");
+        initMQTask.setDisplayName("Group-InitMQ");
+        initMQTask.setServiceTaskType(ServiceTaskType.INIT_MQ);
+        initMQTask.setListenerFactory(groupTaskListenerFactory);
+        process.addTask(initMQTask);
 
-        // init MQ resource
-        ServiceTask initMQResourceTask = new ServiceTask();
-        initMQResourceTask.setName("initMQ");
-        initMQResourceTask.setDisplayName("Group-InitMQ");
-        initMQResourceTask.addServiceTaskType(ServiceTaskType.INIT_MQ);
-        initMQResourceTask.addListenerProvider(serviceTaskListenerFactory);
-        process.addTask(initMQResourceTask);
-
-        // init Sort resource
-        ServiceTask initSortResourceTask = new ServiceTask();
-        initSortResourceTask.setName("initSort");
-        initSortResourceTask.setDisplayName("Group-InitSort");
-        initSortResourceTask.addServiceTaskType(ServiceTaskType.INIT_SORT);
-        initSortResourceTask.addListenerProvider(serviceTaskListenerFactory);
-        process.addTask(initSortResourceTask);
-
-        // init sink
+        // Init Sink
         ServiceTask initSinkTask = new ServiceTask();
-        initSinkTask.setName("initSink");
+        initSinkTask.setName("InitSink");
         initSinkTask.setDisplayName("Group-InitSink");
-        initSinkTask.addServiceTaskType(ServiceTaskType.INIT_SINK);
-        initSinkTask.addListenerProvider(serviceTaskListenerFactory);
+        initSinkTask.setServiceTaskType(ServiceTaskType.INIT_SINK);
+        initSinkTask.setListenerFactory(groupTaskListenerFactory);
         process.addTask(initSinkTask);
+
+        // Init Sort
+        ServiceTask initSortTask = new ServiceTask();
+        initSortTask.setName("InitSort");
+        initSortTask.setDisplayName("Group-InitSort");
+        initSortTask.setServiceTaskType(ServiceTaskType.INIT_SORT);
+        initSortTask.setListenerFactory(groupTaskListenerFactory);
+        process.addTask(initSortTask);
+
+        // Init Source
+        ServiceTask initSourceTask = new ServiceTask();
+        initSourceTask.setName("InitSource");
+        initSourceTask.setDisplayName("Group-InitSource");
+        initSourceTask.setServiceTaskType(ServiceTaskType.INIT_SOURCE);
+        initSourceTask.setListenerFactory(groupTaskListenerFactory);
+        process.addTask(initSourceTask);
 
         // End node
         EndEvent endEvent = new EndEvent();
         process.setEndEvent(endEvent);
 
-        startEvent.addNext(initDataSourceTask);
-        initDataSourceTask.addNext(initMQResourceTask);
-        initMQResourceTask.addNext(initSortResourceTask);
-        initSortResourceTask.addNext(initSinkTask);
-        initSinkTask.addNext(endEvent);
+        // Task dependency order: 1.MQ -> 2.Sink -> 3.Sort -> 4.Source
+        // To ensure that after some tasks fail, data will not start to be collected by source or consumed by sort
+        startEvent.addNext(initMQTask);
+        initMQTask.addNext(initSinkTask);
+        initSinkTask.addNext(initSortTask);
+        initSortTask.addNext(initSourceTask);
+        initSourceTask.addNext(endEvent);
 
         return process;
     }

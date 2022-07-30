@@ -17,12 +17,6 @@
 
 package org.apache.inlong.agent.core.task;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.SynchronousQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import org.apache.inlong.agent.common.AbstractDaemon;
 import org.apache.inlong.agent.common.AgentThreadFactory;
 import org.apache.inlong.agent.conf.AgentConfiguration;
@@ -30,8 +24,16 @@ import org.apache.inlong.agent.constant.AgentConstants;
 import org.apache.inlong.agent.core.AgentManager;
 import org.apache.inlong.agent.utils.AgentUtils;
 import org.apache.inlong.agent.utils.ConfigUtil;
+import org.apache.inlong.agent.utils.ThreadUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Task manager maintains lots of tasks and communicate with job level components.
@@ -55,15 +57,15 @@ public class TaskManager extends AbstractDaemon {
     /**
      * Init task manager.
      *
-     * @param agentManager - agent manager
+     * @param agentManager agent manager
      */
     public TaskManager(AgentManager agentManager) {
         this.agentManager = agentManager;
         this.runningPool = new ThreadPoolExecutor(
-            0, Integer.MAX_VALUE,
-            60L, TimeUnit.SECONDS,
-            new SynchronousQueue<>(),
-            new AgentThreadFactory("task"));
+                0, Integer.MAX_VALUE,
+                60L, TimeUnit.SECONDS,
+                new SynchronousQueue<>(),
+                new AgentThreadFactory("task"));
         // metric for task level
         if (ConfigUtil.isPrometheusEnabled()) {
             this.taskMetrics = new TaskPrometheusMetrics();
@@ -75,16 +77,16 @@ public class TaskManager extends AbstractDaemon {
         AgentConfiguration conf = AgentConfiguration.getAgentConf();
         retryTasks = new LinkedBlockingQueue<>(
                 conf.getInt(
-                    AgentConstants.TASK_RETRY_MAX_CAPACITY, AgentConstants.DEFAULT_TASK_RETRY_MAX_CAPACITY));
+                        AgentConstants.TASK_RETRY_MAX_CAPACITY, AgentConstants.DEFAULT_TASK_RETRY_MAX_CAPACITY));
         monitorInterval = conf.getInt(
-            AgentConstants.TASK_MONITOR_INTERVAL, AgentConstants.DEFAULT_TASK_MONITOR_INTERVAL);
+                AgentConstants.TASK_MONITOR_INTERVAL, AgentConstants.DEFAULT_TASK_MONITOR_INTERVAL);
         taskRetryMaxTime = conf
                 .getInt(AgentConstants.TASK_RETRY_SUBMIT_WAIT_SECONDS,
-                    AgentConstants.DEFAULT_TASK_RETRY_SUBMIT_WAIT_SECONDS);
+                        AgentConstants.DEFAULT_TASK_RETRY_SUBMIT_WAIT_SECONDS);
         taskMaxCapacity = conf.getInt(
-            AgentConstants.TASK_RETRY_MAX_CAPACITY, AgentConstants.DEFAULT_TASK_RETRY_MAX_CAPACITY);
+                AgentConstants.TASK_RETRY_MAX_CAPACITY, AgentConstants.DEFAULT_TASK_RETRY_MAX_CAPACITY);
         waitTime = conf.getLong(
-            AgentConstants.THREAD_POOL_AWAIT_TIME, AgentConstants.DEFAULT_THREAD_POOL_AWAIT_TIME);
+                AgentConstants.THREAD_POOL_AWAIT_TIME, AgentConstants.DEFAULT_THREAD_POOL_AWAIT_TIME);
     }
 
     /**
@@ -103,7 +105,7 @@ public class TaskManager extends AbstractDaemon {
     /**
      * submit task, wait if task queue is full.
      *
-     * @param task - task
+     * @param task task
      */
     public void submitTask(Task task) {
         TaskWrapper taskWrapper = new TaskWrapper(agentManager, task);
@@ -134,7 +136,7 @@ public class TaskManager extends AbstractDaemon {
     /**
      * retry task.
      *
-     * @param wrapper - task wrapper
+     * @param wrapper task wrapper
      */
     private boolean addRetryTask(TaskWrapper wrapper) {
         LOGGER.info("retry submit task {}", wrapper.getTask().getTaskId());
@@ -156,8 +158,8 @@ public class TaskManager extends AbstractDaemon {
     /**
      * Check whether task is finished
      *
-     * @param taskId - task id
-     * @return - true if task is finished otherwise false
+     * @param taskId task id
+     * @return true if task is finished otherwise false
      */
     public boolean isTaskFinished(String taskId) {
         TaskWrapper wrapper = tasks.get(taskId);
@@ -184,7 +186,7 @@ public class TaskManager extends AbstractDaemon {
     /**
      * Remove task and wait task to finish by task id
      *
-     * @param taskId - task id
+     * @param taskId task id
      */
     public void removeTask(String taskId) {
         taskMetrics.decRunningTaskCount();
@@ -198,7 +200,6 @@ public class TaskManager extends AbstractDaemon {
      * kill task
      *
      * @param task task
-     * @return
      */
     public boolean killTask(Task task) {
         // kill running tasks.
@@ -213,7 +214,7 @@ public class TaskManager extends AbstractDaemon {
     /**
      * Thread for checking whether task should retry.
      *
-     * @return - runnable thread
+     * @return runnable thread
      */
     public Runnable createTaskMonitorThread() {
         return () -> {
@@ -236,8 +237,9 @@ public class TaskManager extends AbstractDaemon {
                         }
                     }
                     TimeUnit.SECONDS.sleep(monitorInterval);
-                } catch (Exception ex) {
+                } catch (Throwable ex) {
                     LOGGER.error("Exception caught", ex);
+                    ThreadUtils.threadThrowableHandler(Thread.currentThread(), ex);
                 }
             }
         };

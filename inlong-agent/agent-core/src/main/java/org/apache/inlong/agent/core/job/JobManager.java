@@ -27,6 +27,7 @@ import org.apache.inlong.agent.db.JobProfileDb;
 import org.apache.inlong.agent.db.StateSearchKey;
 import org.apache.inlong.agent.utils.AgentUtils;
 import org.apache.inlong.agent.utils.ConfigUtil;
+import org.apache.inlong.agent.utils.ThreadUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,8 +47,8 @@ import static org.apache.inlong.agent.constant.AgentConstants.JOB_DB_CACHE_TIME;
 import static org.apache.inlong.agent.constant.AgentConstants.JOB_NUMBER_LIMIT;
 import static org.apache.inlong.agent.constant.JobConstants.JOB_ID;
 import static org.apache.inlong.agent.constant.JobConstants.JOB_ID_PREFIX;
-import static org.apache.inlong.agent.constant.JobConstants.SQL_JOB_ID;
 import static org.apache.inlong.agent.constant.JobConstants.JOB_INSTANCE_ID;
+import static org.apache.inlong.agent.constant.JobConstants.SQL_JOB_ID;
 
 /**
  * JobManager maintains lots of jobs, and communicate between server and task manager.
@@ -55,9 +56,6 @@ import static org.apache.inlong.agent.constant.JobConstants.JOB_INSTANCE_ID;
 public class JobManager extends AbstractDaemon {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JobManager.class);
-
-    // key is job instance id.
-    private ConcurrentHashMap<String, JobWrapper> jobs;
     // jobs which are not accepted by running pool.
     private final ConcurrentHashMap<String, Job> pendingJobs;
     // job thread pool
@@ -66,17 +64,18 @@ public class JobManager extends AbstractDaemon {
     private final int monitorInterval;
     private final long jobDbCacheTime;
     private final long jobDbCacheCheckInterval;
-
     // job profile db is only used to recover instance which is not finished running.
     private final JobProfileDb jobProfileDb;
     private final JobMetrics jobMetrics;
     private final AtomicLong index = new AtomicLong(0);
     private final long jobMaxSize;
+    // key is job instance id.
+    private ConcurrentHashMap<String, JobWrapper> jobs;
 
     /**
      * init job manager
      *
-     * @param agentManager - agent manager
+     * @param agentManager agent manager
      */
     public JobManager(AgentManager agentManager, JobProfileDb jobProfileDb) {
         this.jobProfileDb = jobProfileDb;
@@ -107,7 +106,7 @@ public class JobManager extends AbstractDaemon {
     /**
      * submit job to work thread.
      *
-     * @param job - job
+     * @param job job
      */
     private void addJob(Job job) {
         try {
@@ -123,13 +122,15 @@ public class JobManager extends AbstractDaemon {
         } catch (Exception rje) {
             LOGGER.debug("reject job {}", job.getJobInstanceId(), rje);
             pendingJobs.putIfAbsent(job.getJobInstanceId(), job);
+        } catch (Throwable t) {
+            ThreadUtils.threadThrowableHandler(Thread.currentThread(), t);
         }
     }
 
     /**
      * add file job profile
      *
-     * @param profile - job profile.
+     * @param profile job profile.
      */
     public boolean submitFileJobProfile(JobProfile profile) {
         return submitJobProfile(profile, false);
@@ -138,7 +139,7 @@ public class JobManager extends AbstractDaemon {
     /**
      * add file job profile
      *
-     * @param profile - job profile.
+     * @param profile job profile.
      */
     public boolean submitJobProfile(JobProfile profile, boolean singleJob) {
         if (!isJobValid(profile)) {
@@ -146,26 +147,10 @@ public class JobManager extends AbstractDaemon {
         }
         String jobId = profile.get(JOB_ID);
         if (singleJob) {
-            profile.set(JOB_INSTANCE_ID, jobId);
+            profile.set(JOB_INSTANCE_ID, AgentUtils.getSingleJobId(JOB_ID_PREFIX, jobId));
         } else {
             profile.set(JOB_INSTANCE_ID, AgentUtils.getUniqId(JOB_ID_PREFIX, jobId, index.incrementAndGet()));
         }
-        LOGGER.info("submit job profile {}", profile.toJsonStr());
-        getJobConfDb().storeJobFirstTime(profile);
-        addJob(new Job(profile));
-        return true;
-    }
-
-    /**
-     * add sql job profile
-     *
-     * @param profile - job profile.
-     */
-    public boolean submitSqlJobProfile(JobProfile profile) {
-        if (isJobValid(profile)) {
-            return false;
-        }
-        profile.set(JOB_INSTANCE_ID, SQL_JOB_ID);
         LOGGER.info("submit job profile {}", profile.toJsonStr());
         getJobConfDb().storeJobFirstTime(profile);
         addJob(new Job(profile));
@@ -185,6 +170,9 @@ public class JobManager extends AbstractDaemon {
         return true;
     }
 
+    /**
+     * whether job size exceeds maxSize
+     */
     public boolean isJobOverLimit() {
         return jobs.size() >= jobMaxSize;
     }
@@ -217,6 +205,9 @@ public class JobManager extends AbstractDaemon {
         }
     }
 
+    /**
+     * check pending jobs and submit them
+     */
     public Runnable jobStateCheckThread() {
         return () -> {
             while (isRunnable()) {
@@ -229,8 +220,9 @@ public class JobManager extends AbstractDaemon {
                         }
                     }
                     TimeUnit.SECONDS.sleep(monitorInterval);
-                } catch (Exception ex) {
+                } catch (Throwable ex) {
                     LOGGER.error("error caught", ex);
+                    ThreadUtils.threadThrowableHandler(Thread.currentThread(), ex);
                 }
             }
         };
@@ -238,8 +230,6 @@ public class JobManager extends AbstractDaemon {
 
     /**
      * check local db and delete old tasks.
-     *
-     * @return
      */
     public Runnable dbStorageCheckThread() {
         return () -> {
@@ -251,8 +241,9 @@ public class JobManager extends AbstractDaemon {
                 }
                 try {
                     TimeUnit.SECONDS.sleep(jobDbCacheCheckInterval);
-                } catch (Exception ex) {
+                } catch (Throwable ex) {
                     LOGGER.error("sleep error caught", ex);
+                    ThreadUtils.threadThrowableHandler(Thread.currentThread(), ex);
                 }
             }
         };
@@ -261,7 +252,7 @@ public class JobManager extends AbstractDaemon {
     /**
      * mark job as success by job id.
      *
-     * @param jobId - job id
+     * @param jobId job id
      */
     public void markJobAsSuccess(String jobId) {
         JobWrapper wrapper = jobs.remove(jobId);
@@ -273,6 +264,11 @@ public class JobManager extends AbstractDaemon {
         }
     }
 
+    /**
+     * remove job from jobs, and mark it as failed
+     *
+     * @param jobId job id
+     */
     public void markJobAsFailed(String jobId) {
         JobWrapper wrapper = jobs.remove(jobId);
         if (wrapper != null) {
@@ -290,8 +286,6 @@ public class JobManager extends AbstractDaemon {
 
     /**
      * check job existence using job file name
-     *
-     * @return
      */
     public boolean checkJobExsit(String fileName) {
         return jobProfileDb.getJobByFileName(fileName) != null;
@@ -299,8 +293,6 @@ public class JobManager extends AbstractDaemon {
 
     /**
      * get sql job existence
-     *
-     * @return
      */
     public boolean sqlJobExsit() {
         return jobProfileDb.getJobById(SQL_JOB_ID) != null;

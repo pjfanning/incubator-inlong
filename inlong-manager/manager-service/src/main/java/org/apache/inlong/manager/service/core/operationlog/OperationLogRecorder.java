@@ -17,14 +17,12 @@
 
 package org.apache.inlong.manager.service.core.operationlog;
 
-import java.util.Date;
-import java.util.Optional;
-import javax.servlet.http.HttpServletRequest;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.inlong.manager.common.enums.OperationType;
-import org.apache.inlong.manager.common.pojo.user.UserDetail;
-import org.apache.inlong.manager.common.util.JsonUtils;
+import org.apache.inlong.manager.common.pojo.user.UserInfo;
 import org.apache.inlong.manager.common.util.LoginUserUtils;
 import org.apache.inlong.manager.common.util.NetworkUtils;
 import org.apache.inlong.manager.dao.entity.OperationLogEntity;
@@ -33,6 +31,10 @@ import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import javax.servlet.http.HttpServletRequest;
+import java.util.Date;
+import java.util.Optional;
+
 /**
  * Operation of log aspect
  */
@@ -40,6 +42,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 public class OperationLogRecorder {
 
     private static final String ANONYMOUS_USER = "AnonymousUser";
+    private static final Gson GSON = new GsonBuilder().create(); // thread safe
 
     /**
      * Save operation logs of all Controller
@@ -51,19 +54,15 @@ public class OperationLogRecorder {
         }
 
         HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
-
-        UserDetail userDetail = Optional.ofNullable(LoginUserUtils.getLoginUserDetail())
-                .orElseGet(UserDetail::new);
-        String operator = userDetail.getUserName();
+        UserInfo userInfo = Optional.ofNullable(LoginUserUtils.getLoginUser()).orElseGet(UserInfo::new);
+        String operator = userInfo.getName();
         operator = StringUtils.isBlank(operator) ? ANONYMOUS_USER : operator;
 
         String requestUrl = request.getRequestURI();
         String httpMethod = request.getMethod();
         String remoteAddress = NetworkUtils.getClientIpAddress(request);
-        String param = JsonUtils.toJson(request.getParameterMap());
-        String body = JsonUtils.toJson(joinPoint.getArgs());
-
-        OperationType operationType = operationLog.operation();
+        String param = GSON.toJson(request.getParameterMap());
+        String body = GSON.toJson(joinPoint.getArgs());
 
         long start = System.currentTimeMillis();
         boolean success = true;
@@ -76,6 +75,7 @@ public class OperationLogRecorder {
             throw throwable;
         } finally {
             long costTime = System.currentTimeMillis() - start;
+            OperationType operationType = operationLog.operation();
             OperationLogEntity operationLogEntity = new OperationLogEntity();
             operationLogEntity.setOperationType(operationType.name());
             operationLogEntity.setHttpMethod(httpMethod);
@@ -92,9 +92,9 @@ public class OperationLogRecorder {
             if (operationLog.db()) {
                 OperationLogPool.publish(operationLogEntity);
             } else if (success) {
-                log.info("operation log: {}", JsonUtils.toJson(operationLogEntity));
+                log.info("operation log: {}", GSON.toJson(operationLogEntity));
             } else {
-                log.error("request handle failed : {}", JsonUtils.toJson(operationLogEntity));
+                log.error("request handle failed : {}", GSON.toJson(operationLogEntity));
             }
         }
     }

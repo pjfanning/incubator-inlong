@@ -18,23 +18,27 @@
 package org.apache.inlong.manager.common.util;
 
 import com.google.common.collect.Lists;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
 import java.util.Map;
 import java.util.function.Function;
-import org.junit.Assert;
-import org.junit.Test;
 
+/**
+ * Inlong collection util test.
+ */
 public class InlongCollectionUtilsTest {
 
     @Test
     public void transformToImmutableMap() {
         Map<String, String> emptyMap =
                 InlongCollectionUtils.transformToImmutableMap(null, Function.identity(), Function.identity());
-        Assert.assertTrue(emptyMap.isEmpty());
+        Assertions.assertTrue(emptyMap.isEmpty());
 
         Map<String, Integer> stringIntegerMap =
                 InlongCollectionUtils.transformToImmutableMap(Lists.newArrayList("1", "2", "3"),
                         Function.identity(), Integer::valueOf);
-        Assert.assertEquals(1, (int) stringIntegerMap.get("1"));
+        Assertions.assertEquals(1, (int) stringIntegerMap.get("1"));
 
     }
 }

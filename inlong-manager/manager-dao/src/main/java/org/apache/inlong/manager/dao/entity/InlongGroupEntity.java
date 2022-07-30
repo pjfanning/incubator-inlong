@@ -22,6 +22,9 @@ import lombok.Data;
 import java.io.Serializable;
 import java.util.Date;
 
+/**
+ * Inlong group entity, including inlong group id, name, etc.
+ */
 @Data
 public class InlongGroupEntity implements Serializable {
 
@@ -29,27 +32,29 @@ public class InlongGroupEntity implements Serializable {
     private Integer id;
     private String inlongGroupId;
     private String name;
-    private String cnName;
     private String description;
-    private String middlewareType;
-    private String queueModule;
-    private Integer topicPartitionNum;
-    private String mqResourceObj;
+    private String mqType;
+    private String mqResource;
     private Integer dailyRecords;
     private Integer dailyStorage;
     private Integer peakRecords;
-    private Integer zookeeperEnabled;
     private Integer maxLength;
-    private String schemaName;
+
+    private Integer enableZookeeper;
+    private Integer enableCreateResource;
+    private Integer lightweight;
+    private String inlongClusterTag;
+
+    private String extParams;
     private String inCharges;
     private String followers;
     private Integer status;
+    private Integer previousStatus;
     private Integer isDeleted;
     private String creator;
     private String modifier;
     private Date createTime;
     private Date modifyTime;
-    private String tempView;
-    private Integer proxyClusterId;
+    private Integer version;
 
 }

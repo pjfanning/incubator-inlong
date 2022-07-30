@@ -17,14 +17,9 @@
 
 package org.apache.inlong.dataproxy.sink.pulsarzone;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.LinkedBlockingQueue;
-
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.flume.Channel;
 import org.apache.flume.Context;
-import org.apache.inlong.dataproxy.config.RemoteConfigManager;
 import org.apache.inlong.dataproxy.config.holder.CacheClusterConfigHolder;
 import org.apache.inlong.dataproxy.config.holder.CommonPropertiesHolder;
 import org.apache.inlong.dataproxy.config.holder.IdTopicConfigHolder;
@@ -33,6 +28,10 @@ import org.apache.inlong.dataproxy.metrics.DataProxyMetricItem;
 import org.apache.inlong.dataproxy.metrics.audit.AuditUtils;
 import org.apache.inlong.dataproxy.sink.SinkContext;
 import org.apache.inlong.sdk.commons.protocol.ProxySdk.INLONG_COMPRESSED_TYPE;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * 
@@ -46,7 +45,6 @@ public class PulsarZoneSinkContext extends SinkContext {
 
     private final LinkedBlockingQueue<DispatchProfile> dispatchQueue;
 
-    private final String proxyClusterId;
     private final String nodeId;
     private final Context producerContext;
     //
@@ -63,8 +61,6 @@ public class PulsarZoneSinkContext extends SinkContext {
             LinkedBlockingQueue<DispatchProfile> dispatchQueue) {
         super(sinkName, context, channel);
         this.dispatchQueue = dispatchQueue;
-        // proxyClusterId
-        this.proxyClusterId = CommonPropertiesHolder.getString(RemoteConfigManager.KEY_PROXY_CLUSTER_NAME);
         // nodeId
         this.nodeId = CommonPropertiesHolder.getString(KEY_NODE_ID, "127.0.0.1");
         // compressionType
@@ -99,15 +95,6 @@ public class PulsarZoneSinkContext extends SinkContext {
         super.close();
         this.idTopicHolder.close();
         this.cacheHolder.close();
-    }
-
-    /**
-     * get proxyClusterId
-     * 
-     * @return the proxyClusterId
-     */
-    public String getProxyClusterId() {
-        return proxyClusterId;
     }
 
     /**
@@ -214,6 +201,21 @@ public class PulsarZoneSinkContext extends SinkContext {
         inlongStreamId = (StringUtils.isBlank(inlongStreamId)) ? "-" : inlongStreamId;
         dimensions.put(DataProxyMetricItem.KEY_INLONG_GROUP_ID, inlongGroupId);
         dimensions.put(DataProxyMetricItem.KEY_INLONG_STREAM_ID, inlongStreamId);
+    }
+
+    /**
+     * processSendFail
+     * @param currentRecord
+     * @param producerTopic
+     * @param sendTime
+     */
+    public void processSendFail(DispatchProfile currentRecord, String producerTopic, long sendTime) {
+        if (currentRecord.isResend()) {
+            dispatchQueue.offer(currentRecord);
+            this.addSendResultMetric(currentRecord, producerTopic, false, sendTime);
+        } else {
+            currentRecord.fail();
+        }
     }
 
     /**

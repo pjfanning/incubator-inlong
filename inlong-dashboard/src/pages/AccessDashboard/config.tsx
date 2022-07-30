@@ -70,7 +70,7 @@ export const getFilterFormContent = defaultValues => [
 ];
 
 export const getColumns = ({ onDelete, openModal }) => {
-  const genCreateUrl = record => `/access/create?inlongGroupId=${record.inlongGroupId}`;
+  const genCreateUrl = record => `/access/create/${record.inlongGroupId}`;
   const genDetailUrl = record =>
     [0, 100].includes(record.status)
       ? genCreateUrl(record)
@@ -84,7 +84,7 @@ export const getColumns = ({ onDelete, openModal }) => {
     },
     {
       title: i18n.t('pages.AccessDashboard.config.Name'),
-      dataIndex: 'cnName',
+      dataIndex: 'name',
     },
     {
       title: i18n.t('pages.AccessDashboard.config.InCharges'),

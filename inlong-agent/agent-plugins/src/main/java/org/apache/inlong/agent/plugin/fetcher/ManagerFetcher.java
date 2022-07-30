@@ -37,6 +37,7 @@ import org.apache.inlong.agent.pojo.DbCollectorTaskRequestDto;
 import org.apache.inlong.agent.pojo.DbCollectorTaskResult;
 import org.apache.inlong.agent.utils.AgentUtils;
 import org.apache.inlong.agent.utils.HttpManager;
+import org.apache.inlong.agent.utils.ThreadUtils;
 import org.apache.inlong.common.db.CommandEntity;
 import org.apache.inlong.common.enums.ManagerOpEnum;
 import org.apache.inlong.common.enums.PullJobTypeEnum;
@@ -142,7 +143,7 @@ public class ManagerFetcher extends AbstractDaemon implements ProfileFetcher {
     /**
      * build base url for manager according to config
      *
-     * example - http://127.0.0.1:8080/api/inlong/manager/openapi
+     * example - http://127.0.0.1:8080/inlong/manager/openapi
      */
     private String buildBaseUrl() {
         return "http://" + conf.get(AGENT_MANAGER_VIP_HTTP_HOST)
@@ -153,7 +154,7 @@ public class ManagerFetcher extends AbstractDaemon implements ProfileFetcher {
     /**
      * build vip url for manager according to config
      *
-     * example - http://127.0.0.1:8080/api/inlong/manager/openapi/agent/getInLongManagerIp
+     * example - http://127.0.0.1:8080/inlong/manager/openapi/agent/getManagerIpList
      */
     private String buildVipUrl(String baseUrl) {
         return baseUrl + conf.get(AGENT_MANAGER_VIP_HTTP_PATH, DEFAULT_AGENT_TDM_VIP_HTTP_PATH);
@@ -162,7 +163,7 @@ public class ManagerFetcher extends AbstractDaemon implements ProfileFetcher {
     /**
      * build file collect task url for manager according to config
      *
-     * example - http://127.0.0.1:8080/api/inlong/manager/openapi/fileAgent/getTaskConf
+     * example - http://127.0.0.1:8080/inlong/manager/openapi/fileAgent/getTaskConf
      */
     private String buildFileCollectTaskUrl(String baseUrl) {
         return baseUrl + conf.get(AGENT_MANAGER_TASK_HTTP_PATH, DEFAULT_AGENT_MANAGER_TASK_HTTP_PATH);
@@ -171,7 +172,7 @@ public class ManagerFetcher extends AbstractDaemon implements ProfileFetcher {
     /**
      * build ip check url for manager according to config
      *
-     * example - http://127.0.0.1:8080/api/inlong/manager/openapi/fileAgent/confirmAgentIp
+     * example - http://127.0.0.1:8080/inlong/manager/openapi/fileAgent/confirmAgentIp
      */
     private String buildIpCheckUrl(String baseUrl) {
         return baseUrl + conf.get(AGENT_MANAGER_IP_CHECK_HTTP_PATH, DEFAULT_AGENT_TDM_IP_CHECK_HTTP_PATH);
@@ -180,7 +181,7 @@ public class ManagerFetcher extends AbstractDaemon implements ProfileFetcher {
     /**
      * build db collector get task url for manager according to config
      *
-     * example - http://127.0.0.1:8080/api/inlong/manager/openapi/dbcollector/getTask
+     * example - http://127.0.0.1:8080/inlong/manager/openapi/dbcollector/getTask
      */
     private String buildDbCollectorGetTaskUrl(String baseUrl) {
         return baseUrl + conf
@@ -209,8 +210,11 @@ public class ManagerFetcher extends AbstractDaemon implements ProfileFetcher {
         return null;
     }
 
+    /**
+     * request manager to get manager vipUrl list, and store it to local file
+     */
     public void requestTdmList() {
-        JsonObject result = getResultData(httpManager.doSendGet(managerVipUrl));
+        JsonObject result = getResultData(httpManager.doSendPost(managerVipUrl));
         JsonArray data = result.get(AGENT_MANAGER_RETURN_PARAM_DATA).getAsJsonArray();
         List<String> managerIpList = new ArrayList<>();
         for (JsonElement datum : data) {
@@ -268,7 +272,7 @@ public class ManagerFetcher extends AbstractDaemon implements ProfileFetcher {
         if (profile == null) {
             return;
         }
-        agentManager.getJobManager().submitSqlJobProfile(profile);
+        agentManager.getJobManager().submitJobProfile(profile, true);
     }
 
     /**
@@ -444,8 +448,8 @@ public class ManagerFetcher extends AbstractDaemon implements ProfileFetcher {
     /**
      * fetch manager list, make sure it's not throwing exceptions
      *
-     * @param isInitial - is initial
-     * @param retryTime - retry time
+     * @param isInitial is initial
+     * @param retryTime retry time
      */
     private void fetchTdmList(boolean isInitial, int retryTime) {
         if (retryTime > MAX_RETRY) {
@@ -486,8 +490,9 @@ public class ManagerFetcher extends AbstractDaemon implements ProfileFetcher {
 
                     // fetch db collector task from manager
                     fetchDbCollectTask();
-                } catch (Exception ex) {
+                } catch (Throwable ex) {
                     LOGGER.warn("exception caught", ex);
+                    ThreadUtils.threadThrowableHandler(Thread.currentThread(), ex);
                 }
             }
         };
@@ -496,7 +501,7 @@ public class ManagerFetcher extends AbstractDaemon implements ProfileFetcher {
     /**
      * request manager to get trigger profiles.
      *
-     * @return - trigger profile list
+     * @return trigger profile list
      */
     @Override
     public List<TriggerProfile> getTriggerProfiles() {

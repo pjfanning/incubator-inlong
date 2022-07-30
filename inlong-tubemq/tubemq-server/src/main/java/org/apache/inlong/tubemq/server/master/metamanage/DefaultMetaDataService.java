@@ -29,7 +29,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-
 import org.apache.inlong.tubemq.corebase.TBaseConstants;
 import org.apache.inlong.tubemq.corebase.TErrCodeConstants;
 import org.apache.inlong.tubemq.corebase.TokenConstants;
@@ -557,8 +556,8 @@ public class DefaultMetaDataService implements MetaDataService {
     }
 
     @Override
-    public Set<String> getTotalConfiguredTopicNames() {
-        return metaConfigMapper.getConfiguredTopicSet();
+    public Set<String> getDeployedTopicSet() {
+        return metaConfigMapper.getDeployedTopicSet();
     }
 
     @Override
@@ -1066,13 +1065,35 @@ public class DefaultMetaDataService implements MetaDataService {
     }
 
     @Override
+    public GroupConsumeCtrlEntity getConsumeCtrlByGroupAndTopic(String groupName,
+                                                                String topicName) {
+        return metaConfigMapper.getConsumeCtrlByGroupAndTopic(groupName, topicName);
+    }
+
+    @Override
     public List<GroupConsumeCtrlEntity> getConsumeCtrlByTopic(String topicName) {
         return metaConfigMapper.getConsumeCtrlByTopic(topicName);
     }
 
     @Override
+    public Map<String, List<GroupConsumeCtrlEntity>> getConsumeCtrlByTopic(Set<String> topicSet) {
+        return metaConfigMapper.getConsumeCtrlByTopic(topicSet);
+    }
+
+    @Override
     public Set<String> getDisableTopicByGroupName(String groupName) {
         return metaConfigMapper.getDisableTopicByGroupName(groupName);
+    }
+
+    @Override
+    public List<GroupConsumeCtrlEntity> getConsumeCtrlByGroupName(String groupName) {
+        return metaConfigMapper.getConsumeCtrlByGroupName(groupName);
+    }
+
+    @Override
+    public Map<String, List<GroupConsumeCtrlEntity>> getConsumeCtrlByGroupName(
+            Set<String> groupSet) {
+        return metaConfigMapper.getConsumeCtrlByGroupName(groupSet);
     }
 
     @Override

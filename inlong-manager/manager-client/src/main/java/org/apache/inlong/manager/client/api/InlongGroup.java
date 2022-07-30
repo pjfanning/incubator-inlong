@@ -17,6 +17,12 @@
 
 package org.apache.inlong.manager.client.api;
 
+import org.apache.inlong.manager.common.pojo.group.InlongGroupCountResponse;
+import org.apache.inlong.manager.common.pojo.group.InlongGroupInfo;
+import org.apache.inlong.manager.common.pojo.group.InlongGroupTopicInfo;
+import org.apache.inlong.manager.common.pojo.sort.BaseSortConf;
+import org.apache.inlong.manager.common.pojo.stream.InlongStreamInfo;
+
 import java.util.List;
 
 public interface InlongGroup {
@@ -24,15 +30,16 @@ public interface InlongGroup {
     /**
      * Create inlong stream
      *
+     * @param streamInfo inlong stream info
      * @return inlong stream builder
      */
-    InlongStreamBuilder createStream(InlongStreamConf streamConf) throws Exception;
+    InlongStreamBuilder createStream(InlongStreamInfo streamInfo) throws Exception;
 
     /**
      * Create snapshot for Inlong group
      *
-     * @return
-     * @throws Exception
+     * @return inlong group context
+     * @throws Exception the exception
      */
     InlongGroupContext context() throws Exception;
 
@@ -48,28 +55,29 @@ public interface InlongGroup {
     /**
      * Update Inlong group on updated conf
      *
-     * @return
-     * @throws Exception
+     * Update inlong group and sort conf
+     *
+     * @param originGroupInfo origin group info that need to update
+     * @param sortConf sort config that need to update
+     * @throws Exception any exception
      */
-    void update(InlongGroupConf conf) throws Exception;
+    void update(InlongGroupInfo originGroupInfo, BaseSortConf sortConf) throws Exception;
+
+    /**
+     * Update sort conf for Inlong group
+     *
+     * @param sortConf sort config that need to update
+     * @throws Exception any exception
+     */
+    void update(BaseSortConf sortConf) throws Exception;
 
     /**
      * ReInit inlong group after update configuration for group.
-     * Must be invoked when group is rejected,failed or started
+     * Must be invoked when group is rejected, failed or started
      *
      * @return inlong group info
      */
-    InlongGroupContext reInitOnUpdate(InlongGroupConf conf) throws Exception;
-
-    /**
-     * Init inlong group on updated conf.
-     * Must be invoked when group is rejected,failed or started
-     * This method is deprecated, recommend to use reInitOnUpdate
-     *
-     * @return inlong group info
-     */
-    @Deprecated
-    InlongGroupContext initOnUpdate(InlongGroupConf conf) throws Exception;
+    InlongGroupContext reInitOnUpdate(InlongGroupInfo originGroupInfo, BaseSortConf sortConf) throws Exception;
 
     /**
      * Suspend the stream group and return group info.
@@ -100,14 +108,14 @@ public interface InlongGroup {
     InlongGroupContext restart(boolean async) throws Exception;
 
     /**
-     * delete the stream group and return group info
+     * Delete the stream group and return group info
      *
      * @return group info
      */
     InlongGroupContext delete() throws Exception;
 
     /**
-     * delete the stream group and return group info
+     * Delete the stream group and return group info
      *
      * @return group info
      */
@@ -119,4 +127,32 @@ public interface InlongGroup {
      * @return inlong stream contained in this group
      */
     List<InlongStream> listStreams() throws Exception;
+
+    /**
+     * Reset group status when group is in INITIALIZING or OPERATING status for a long time.
+     * You can choose to rerun process, or reset to final status directly, both can push the group to next status.
+     * This method has side effect on group you create, use carefully
+     *
+     * @param rerun 1: rerun the process; 0: not rerun the process
+     * @param resetFinalStatus 1: reset to success status;  0: reset to failed status, this params will work
+     *         when rerun = 0
+     * @return group info
+     * @throws Exception
+     */
+    InlongGroupContext reset(int rerun, int resetFinalStatus) throws Exception;
+
+    /**
+     * Get InLong group count info by user.
+     *
+     * @return {@link InlongGroupCountResponse}
+     */
+    InlongGroupCountResponse countGroupByUser() throws Exception;
+
+    /**
+     * Get InLong group topic info by topic id.
+     *
+     * @param id topic id
+     * @return {@link InlongGroupTopicInfo}
+     */
+    InlongGroupTopicInfo getTopic(String id)throws Exception;
 }

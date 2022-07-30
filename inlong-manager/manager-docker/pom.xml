@@ -1,12 +1,12 @@
 <!--
 
     Licensed to the Apache Software Foundation (ASF) under one
-    or more contributor license agreements.  See the NOTICE file
+    or more contributor license agreements. See the NOTICE file
     distributed with this work for additional information
-    regarding copyright ownership.  The ASF licenses this file
+    regarding copyright ownership. The ASF licenses this file
     to you under the Apache License, Version 2.0 (the
     "License"); you may not use this file except in compliance
-    with the License.  You may obtain a copy of the License at
+    with the License. You may obtain a copy of the License at
 
       http://www.apache.org/licenses/LICENSE-2.0
 
@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache.inlong</groupId>
         <artifactId>inlong-manager</artifactId>
-        <version>1.2.0-incubating-SNAPSHOT</version>
+        <version>1.3.0-SNAPSHOT</version>
     </parent>
     <artifactId>manager-docker</artifactId>
     <modelVersion>4.0.0</modelVersion>
@@ -38,6 +38,28 @@
             <classifier>bin</classifier>
             <type>tar.gz</type>
             <scope>provided</scope>
+        </dependency>
+        <!-- copy sort-dist.jar to the manager-docker/target path -->
+        <dependency>
+            <groupId>org.apache.inlong</groupId>
+            <artifactId>sort-dist</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <!-- copy sort-connectors to the manager-docker/target path -->
+        <dependency>
+            <groupId>org.apache.inlong</groupId>
+            <artifactId>sort-connector-pulsar</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.inlong</groupId>
+            <artifactId>sort-connector-jdbc</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.inlong</groupId>
+            <artifactId>sort-connector-hive</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
     </dependencies>
 
@@ -74,7 +96,7 @@
                             <pullNewerImage>false</pullNewerImage>
                             <tag>${project.version}</tag>
                             <buildArgs>
-                                <MANAGER_TARBALL>target/manager-web-${project.version}-bin.tar.gz</MANAGER_TARBALL>
+                                <VERSION>${project.version}</VERSION>
                             </buildArgs>
                         </configuration>
                     </plugin>
@@ -90,8 +112,10 @@
                                 </goals>
                                 <phase>generate-resources</phase>
                                 <configuration>
-                                    <outputDirectory>${project.build.directory}/</outputDirectory>
-                                    <includeArtifactIds>manager-web</includeArtifactIds>
+                                    <outputDirectory>target/</outputDirectory>
+                                    <includeArtifactIds>manager-web,
+                                        sort-dist,sort-connector-pulsar,
+                                        sort-connector-jdbc,sort-connector-hive</includeArtifactIds>
                                     <excludeTransitive>true</excludeTransitive>
                                 </configuration>
                             </execution>

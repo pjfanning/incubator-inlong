@@ -18,40 +18,48 @@
 package org.apache.inlong.manager.common.pojo.sink;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import com.google.common.collect.Maps;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import org.apache.inlong.manager.common.pojo.common.UpdateValidation;
+import org.hibernate.validator.constraints.Length;
 
+import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Request of sink
+ * Stream sink request
  */
 @Data
-@ApiModel("Request of sink")
-@JsonTypeInfo(use = Id.NAME, visible = true, property = "sinkType")
-public class SinkRequest {
+@ApiModel("Stream sink request")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, visible = true, property = "sinkType")
+public abstract class SinkRequest {
 
+    @NotNull(groups = UpdateValidation.class)
+    @ApiModelProperty(value = "Primary key")
     private Integer id;
 
+    @NotBlank(message = "inlongGroupId cannot be blank")
     @ApiModelProperty("Inlong group id")
-    @NotNull
     private String inlongGroupId;
 
+    @NotBlank(message = "inlongStreamId cannot be blank")
     @ApiModelProperty("Inlong stream id")
-    @NotNull
     private String inlongStreamId;
 
+    @NotBlank(message = "sinkType cannot be blank")
     @ApiModelProperty("Sink type, including: HIVE, ES, etc.")
-    @NotNull
     private String sinkType;
 
-    @ApiModelProperty("Sink name, unique in one stream.")
-    @NotNull
+    @NotBlank(message = "sinkName cannot be blank")
+    @Length(min = 1, max = 100, message = "sinkName length must be between 1 and 100")
+    @Pattern(regexp = "^[a-z0-9_-]{1,100}$",
+            message = "sinkName only supports lowercase letters, numbers, '-', or '_'")
+    @ApiModelProperty("Sink name, unique in one stream")
     private String sinkName;
 
     @ApiModelProperty("Sink description")
@@ -69,12 +77,16 @@ public class SinkRequest {
     @ApiModelProperty("Sort consumer group")
     private String sortConsumerGroup;
 
-    @ApiModelProperty(value = "Whether to enable create sink resource? 0: disable, 1: enable. default is 1")
+    @ApiModelProperty(value = "Whether to enable create sink resource? 0: disable, 1: enable. Default is 1")
     private Integer enableCreateResource = 1;
 
     @ApiModelProperty("Sink field list")
-    private List<SinkFieldRequest> fieldList;
+    private List<SinkField> sinkFieldList;
 
-    @ApiModelProperty("Properties for sink")
+    @ApiModelProperty("Other properties if needed")
     private Map<String, Object> properties = Maps.newHashMap();
+
+    @ApiModelProperty(value = "Version number")
+    private Integer version;
+
 }

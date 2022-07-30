@@ -22,6 +22,9 @@ import org.apache.inlong.manager.common.pojo.stream.InlongStreamInfo;
 
 import java.util.List;
 
+/**
+ * Flink infomation, including end point, job name, source type, etc.
+ */
 @Data
 public class FlinkInfo {
 
@@ -32,6 +35,8 @@ public class FlinkInfo {
     private List<InlongStreamInfo> inlongStreamInfoList;
 
     private String localJarPath;
+
+    private List<String> connectorJarPaths;
 
     private String localConfPath;
 
@@ -46,6 +51,4 @@ public class FlinkInfo {
     private boolean isException = false;
 
     private String exceptionMsg;
-
-
 }

@@ -19,11 +19,6 @@ package org.apache.inlong.manager.workflow.definition;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -31,11 +26,17 @@ import lombok.NoArgsConstructor;
 import org.apache.commons.collections.MapUtils;
 import org.apache.inlong.manager.common.exceptions.WorkflowException;
 import org.apache.inlong.manager.common.exceptions.WorkflowListenerException;
-import org.apache.inlong.manager.common.pojo.workflow.form.ProcessForm;
+import org.apache.inlong.manager.common.pojo.workflow.form.process.ProcessForm;
 import org.apache.inlong.manager.common.util.Preconditions;
 import org.apache.inlong.manager.workflow.WorkflowAction;
 import org.apache.inlong.manager.workflow.event.process.ProcessEvent;
 import org.apache.inlong.manager.workflow.event.process.ProcessEventListener;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * WorkflowProcess definition
@@ -62,37 +63,43 @@ public class WorkflowProcess extends Element {
      */
     private Integer hidden = 0;
 
-    private Map<ProcessEvent, List<ProcessEventListener>> syncListeners = Maps.newHashMap();
-    private Map<ProcessEvent, List<ProcessEventListener>> asyncListeners = Maps.newHashMap();
+    private Map<ProcessEvent, List<ProcessEventListener>> listeners = Maps.newHashMap();
     private Map<String, ProcessEventListener> nameToListenerMap = Maps.newHashMap();
 
     private int version;
 
+    /**
+     * Add listener to workflow process.
+     */
     public WorkflowProcess addListener(ProcessEventListener listener) {
         if (nameToListenerMap.containsKey(listener.name())) {
             throw new WorkflowListenerException("duplicate listener:" + listener.name());
         }
         nameToListenerMap.put(listener.name(), listener);
-        if (listener.async()) {
-            this.asyncListeners.computeIfAbsent(listener.event(), a -> Lists.newArrayList()).add(listener);
-        } else {
-            this.syncListeners.computeIfAbsent(listener.event(), a -> Lists.newArrayList()).add(listener);
-        }
+        listeners.computeIfAbsent(listener.event(), a -> Lists.newArrayList()).add(listener);
         return this;
     }
 
-    public List<ProcessEventListener> asyncListeners(ProcessEvent processEvent) {
-        return this.asyncListeners.getOrDefault(processEvent, ProcessEventListener.EMPTY_LIST);
+    /**
+     * Get sync process event listener list.
+     */
+    public List<ProcessEventListener> listeners(ProcessEvent processEvent) {
+        return this.listeners.getOrDefault(processEvent, ProcessEventListener.EMPTY_LIST);
     }
 
-    public List<ProcessEventListener> syncListeners(ProcessEvent processEvent) {
-        return this.syncListeners.getOrDefault(processEvent, ProcessEventListener.EMPTY_LIST);
-    }
-
+    /**
+     * Get process event listener by listener name.
+     *
+     * @param listenerName listener name.
+     * @return process event listener.
+     */
     public ProcessEventListener listener(String listenerName) {
         return this.nameToListenerMap.get(listenerName);
     }
 
+    /**
+     * Add workflow task.
+     */
     public WorkflowProcess addTask(WorkflowTask task) {
         if (this.nameToTaskMap.containsKey(task.getName())) {
             throw new WorkflowException("task name cannot duplicate " + task.getName());
@@ -101,6 +108,12 @@ public class WorkflowProcess extends Element {
         return this;
     }
 
+    /**
+     * Get workflow task by task name.
+     *
+     * @param name workflow task name.
+     * @return workflow task info.
+     */
     public WorkflowTask getTaskByName(String name) {
         if (!this.nameToTaskMap.containsKey(name)) {
             throw new WorkflowException("cannot find task with the name " + name);
@@ -126,7 +139,7 @@ public class WorkflowProcess extends Element {
         WorkflowProcess cloneProcess = (WorkflowProcess) super.clone();
         cloneProcess.setStartEvent((StartEvent) this.startEvent.clone());
         cloneProcess.setEndEvent((EndEvent) this.endEvent.clone());
-        Map<String, WorkflowTask> cloneMap = new HashMap<>();
+        Map<String, WorkflowTask> nameToTaskMap = new HashMap<>();
 
         StartEvent startEvent = cloneProcess.getStartEvent();
         Map<WorkflowAction, List<ConditionNextElement>> workflowActionListMap = startEvent.getActionToNextElementMap();
@@ -141,7 +154,7 @@ public class WorkflowProcess extends Element {
                     Element element = conditionNextElement.getElement();
                     if (element instanceof WorkflowTask) {
                         WorkflowTask workflowTask = (WorkflowTask) element;
-                        cloneMap.put(workflowTask.getName(), workflowTask);
+                        nameToTaskMap.put(workflowTask.getName(), workflowTask);
                     }
                     if (element instanceof NextableElement) {
                         NextableElement nextableElement = (NextableElement) element;
@@ -155,13 +168,10 @@ public class WorkflowProcess extends Element {
             }
         }
 
-        cloneProcess.setNameToTaskMap(cloneMap);
-        Map<ProcessEvent, List<ProcessEventListener>> cloneSyncListener = Maps.newHashMap();
-        Map<ProcessEvent, List<ProcessEventListener>> cloneAsyncListeners = Maps.newHashMap();
-        cloneSyncListener.putAll(syncListeners);
-        cloneAsyncListeners.putAll(asyncListeners);
-        cloneProcess.syncListeners = cloneSyncListener;
-        cloneProcess.asyncListeners = cloneAsyncListeners;
+        cloneProcess.setNameToTaskMap(nameToTaskMap);
+        Map<ProcessEvent, List<ProcessEventListener>> cloneListeners = Maps.newHashMap();
+        cloneListeners.putAll(listeners);
+        cloneProcess.listeners = cloneListeners;
 
         return cloneProcess;
     }

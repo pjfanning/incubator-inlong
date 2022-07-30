@@ -18,8 +18,9 @@
 package org.apache.inlong.manager.dao.mapper;
 
 import org.apache.ibatis.annotations.Param;
-import org.apache.inlong.common.pojo.dataproxy.DataProxyConfig;
+import org.apache.inlong.manager.common.pojo.group.InlongGroupBriefInfo;
 import org.apache.inlong.manager.common.pojo.group.InlongGroupPageRequest;
+import org.apache.inlong.manager.common.pojo.sortstandalone.SortSourceGroupInfo;
 import org.apache.inlong.manager.dao.entity.InlongGroupEntity;
 import org.springframework.stereotype.Repository;
 
@@ -29,11 +30,7 @@ import java.util.Map;
 @Repository
 public interface InlongGroupEntityMapper {
 
-    int deleteByPrimaryKey(Integer id);
-
     int insert(InlongGroupEntity record);
-
-    int insertSelective(InlongGroupEntity record);
 
     InlongGroupEntity selectByPrimaryKey(Integer id);
 
@@ -43,26 +40,26 @@ public interface InlongGroupEntityMapper {
 
     InlongGroupEntity selectByGroupIdForUpdate(String groupId);
 
-    Integer selectIdentifierExist(String groupId);
-
     List<InlongGroupEntity> selectByCondition(InlongGroupPageRequest request);
 
-    List<InlongGroupEntity> selectAll(Integer status);
+    List<InlongGroupBriefInfo> selectBriefList(InlongGroupPageRequest request);
 
-    /**
-     * get all config with inlong group status of 130, that is, config successful
-     */
-    List<DataProxyConfig> selectDataProxyConfig();
-
-    List<String> selectGroupIdByProxyId(Integer proxyClusterId);
-
-    int updateByPrimaryKeySelective(InlongGroupEntity record);
-
-    int updateByIdentifierSelective(InlongGroupEntity record);
+    List<InlongGroupEntity> selectByClusterTag(@Param(value = "inlongClusterTag") String inlongClusterTag);
 
     int updateByPrimaryKey(InlongGroupEntity record);
 
+    int updateByIdentifierSelective(InlongGroupEntity record);
+
     int updateStatus(@Param("groupId") String groupId, @Param("status") Integer status,
             @Param("modifier") String modifier);
+
+    int deleteByPrimaryKey(Integer id);
+
+    /**
+     * Select all group info for sort sdk.
+     *
+     * @return All inlong group info.
+     */
+    List<SortSourceGroupInfo> selectAllGroups();
 
 }

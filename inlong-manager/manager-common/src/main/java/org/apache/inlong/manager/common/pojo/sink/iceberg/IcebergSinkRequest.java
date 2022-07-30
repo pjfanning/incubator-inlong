@@ -27,23 +27,23 @@ import org.apache.inlong.manager.common.pojo.sink.SinkRequest;
 import org.apache.inlong.manager.common.util.JsonTypeDefine;
 
 /**
- * Request of the Iceberg sink info
+ * Iceberg sink request.
  */
 @Data
 @ToString(callSuper = true)
 @EqualsAndHashCode(callSuper = true)
-@ApiModel(value = "Request of the Iceberg sink info")
+@ApiModel(value = "Iceberg sink request")
 @JsonTypeDefine(value = SinkType.SINK_ICEBERG)
 public class IcebergSinkRequest extends SinkRequest {
 
-    @ApiModelProperty("Hive JDBC URL")
-    private String jdbcUrl;
+    @ApiModelProperty("Catalog type, like: HIVE, HADOOP, default is HIVE")
+    private String catalogType = "HIVE";
 
-    @ApiModelProperty("Username for JDBC URL")
-    private String username;
+    @ApiModelProperty("Catalog uri, such as hive metastore thrift://ip:port")
+    private String catalogUri;
 
-    @ApiModelProperty("User password")
-    private String password;
+    @ApiModelProperty("Iceberg data warehouse dir")
+    private String warehouse;
 
     @ApiModelProperty("Target database name")
     private String dbName;
@@ -57,13 +57,10 @@ public class IcebergSinkRequest extends SinkRequest {
     @ApiModelProperty("File format, support: Parquet, Orc, Avro")
     private String fileFormat;
 
-    @ApiModelProperty("Data encoding type")
-    private String dataEncoding;
+    @ApiModelProperty("Partition type, like: H-hour, D-day, W-week, M-month, O-once, R-regulation")
+    private String partitionType;
 
-    @ApiModelProperty("Data field separator")
-    private String dataSeparator;
-
-    @ApiModelProperty("Data consistency strategy, support: EXACTLY_ONCE(default), AT_LEAST_ONCE")
-    private String dataConsistency;
+    @ApiModelProperty("Primary key")
+    private String primaryKey;
 
 }

@@ -23,20 +23,21 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
+import org.apache.inlong.manager.client.api.enums.SimpleGroupStatus;
+import org.apache.inlong.manager.client.api.enums.SimpleSourceStatus;
 import org.apache.inlong.manager.client.api.inner.InnerGroupContext;
-import org.apache.inlong.manager.client.api.util.AssertUtil;
-import org.apache.inlong.manager.client.api.util.GsonUtil;
-import org.apache.inlong.manager.common.enums.GroupStatus;
 import org.apache.inlong.manager.common.pojo.group.InlongGroupExtInfo;
 import org.apache.inlong.manager.common.pojo.group.InlongGroupInfo;
-import org.apache.inlong.manager.common.pojo.stream.StreamSource;
-import org.apache.inlong.manager.common.pojo.stream.StreamSource.State;
+import org.apache.inlong.manager.common.pojo.source.StreamSource;
+import org.apache.inlong.manager.common.util.Preconditions;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Inlong group context.
+ */
 @Data
 @Slf4j
 public class InlongGroupContext implements Serializable {
@@ -45,7 +46,7 @@ public class InlongGroupContext implements Serializable {
 
     private String groupName;
 
-    private InlongGroupConf groupConf;
+    private InlongGroupInfo groupInfo;
 
     private Map<String, InlongStream> inlongStreamMap;
 
@@ -54,38 +55,21 @@ public class InlongGroupContext implements Serializable {
      */
     private Map<String, String> extensions;
 
-    /**
-     * Logs for Inlong group, taskName->logs.
-     */
-    private Map<String, List<String>> groupLogs;
+    private SimpleGroupStatus status;
 
-    /**
-     * Error message for Inlong group, taskName->exceptionMsg.
-     */
-    private Map<String, List<String>> groupErrLogs;
-
-    /**
-     * Logs for each stream, key: streamName, value: componentName->log
-     */
-    private Map<String, Map<String, List<String>>> streamErrLogs = Maps.newHashMap();
-
-    private InlongGroupState state;
-
-    public InlongGroupContext(InnerGroupContext groupContext, InlongGroupConf streamGroupConf) {
+    public InlongGroupContext(InnerGroupContext groupContext) {
         InlongGroupInfo groupInfo = groupContext.getGroupInfo();
-        AssertUtil.notNull(groupInfo);
+        Preconditions.checkNotNull(groupInfo, "inlong group info cannot be null");
         this.groupId = groupInfo.getInlongGroupId();
         this.groupName = groupInfo.getName();
-        this.groupConf = streamGroupConf;
+        this.groupInfo = groupInfo;
         this.inlongStreamMap = groupContext.getStreamMap();
-        this.groupErrLogs = Maps.newHashMap();
-        this.groupLogs = Maps.newHashMap();
-        this.state = InlongGroupState.parseByBizStatus(groupInfo.getStatus());
+        this.status = SimpleGroupStatus.parseStatusByCode(groupInfo.getStatus());
         recheckState();
         this.extensions = Maps.newHashMap();
         List<InlongGroupExtInfo> extInfos = groupInfo.getExtList();
         if (CollectionUtils.isNotEmpty(extInfos)) {
-            extInfos.stream().forEach(extInfo -> {
+            extInfos.forEach(extInfo -> {
                 extensions.put(extInfo.getKeyName(), extInfo.getKeyValue());
             });
         }
@@ -97,14 +81,14 @@ public class InlongGroupContext implements Serializable {
         }
         List<StreamSource> sourcesInGroup = Lists.newArrayList();
         List<StreamSource> failedSources = Lists.newArrayList();
-        this.inlongStreamMap.values().stream().forEach(inlongStream -> {
+        this.inlongStreamMap.values().forEach(inlongStream -> {
             Map<String, StreamSource> sources = inlongStream.getSources();
             if (MapUtils.isNotEmpty(sources)) {
                 for (Map.Entry<String, StreamSource> entry : sources.entrySet()) {
                     StreamSource source = entry.getValue();
                     if (source != null) {
                         sourcesInGroup.add(source);
-                        if (source.getState() == State.FAILED) {
+                        if (SimpleSourceStatus.parseByStatus(source.getStatus()) == SimpleSourceStatus.FAILED) {
                             failedSources.add(source);
                         }
                     }
@@ -113,122 +97,30 @@ public class InlongGroupContext implements Serializable {
         });
         // check if any stream source is failed
         if (CollectionUtils.isNotEmpty(failedSources)) {
-            this.state = InlongGroupState.FAILED;
-            for (StreamSource failedSource : failedSources) {
-                this.groupErrLogs.computeIfAbsent("failedSources", Lists::newArrayList)
-                        .add(GsonUtil.toJson(failedSource));
-            }
+            this.status = SimpleGroupStatus.FAILED;
             return;
         }
         // check if any stream source is in indirect state
-        switch (this.state) {
+        switch (this.status) {
             case STARTED:
                 for (StreamSource source : sourcesInGroup) {
-                    if (source.getState() != State.NORMAL) {
-                        log.warn("StreamSource:{} is not started", source);
-                        this.state = InlongGroupState.INITIALIZING;
+                    if (SimpleSourceStatus.parseByStatus(source.getStatus()) != SimpleSourceStatus.NORMAL) {
+                        log.warn("stream source is not started: {}", source);
+                        this.status = SimpleGroupStatus.INITIALIZING;
                         break;
                     }
                 }
                 return;
             case STOPPED:
                 for (StreamSource source : sourcesInGroup) {
-                    if (source.getState() != State.FROZEN) {
-                        log.warn("StreamSource:{} is not stopped", source);
-                        this.state = InlongGroupState.OPERATING;
+                    if (SimpleSourceStatus.parseByStatus(source.getStatus()) != SimpleSourceStatus.FROZEN) {
+                        log.warn("stream source is not stopped: {}", source);
+                        this.status = SimpleGroupStatus.OPERATING;
                         break;
                     }
                 }
                 return;
             default:
-                return;
-        }
-    }
-
-    public enum InlongGroupState {
-        CREATE, REJECTED, INITIALIZING, OPERATING, STARTED, FAILED, STOPPED, FINISHED, DELETED;
-
-        // Reference to  org.apache.inlong.manager.common.enums.GroupState code
-        public static InlongGroupState parseByBizStatus(int bizCode) {
-
-            GroupStatus groupStatus = GroupStatus.forCode(bizCode);
-
-            switch (groupStatus) {
-                case DRAFT:
-                case TO_BE_SUBMIT:
-                    return CREATE;
-                case DELETING:
-                case SUSPENDING:
-                case RESTARTING:
-                    return OPERATING;
-                case APPROVE_REJECTED:
-                    return REJECTED;
-                case TO_BE_APPROVAL:
-                case APPROVE_PASSED:
-                case CONFIG_ING:
-                    return INITIALIZING;
-                case CONFIG_FAILED:
-                    return FAILED;
-                case CONFIG_SUCCESSFUL:
-                case RESTARTED:
-                    return STARTED;
-                case SUSPENDED:
-                    return STOPPED;
-                case FINISH:
-                    return FINISHED;
-                case DELETED:
-                    return DELETED;
-                default:
-                    throw new IllegalArgumentException(String.format("Unsupported status %s for group", bizCode));
-            }
-        }
-
-        public static List<Integer> parseStatusByStrState(String state) {
-
-            InlongGroupState groupState;
-            try {
-                groupState = InlongGroupState.valueOf(state);
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException(String.format("Unsupported status %s for group", state));
-            }
-
-            List<Integer> stateList = new ArrayList<>();
-            switch (groupState) {
-                case CREATE:
-                    stateList.add(GroupStatus.DRAFT.getCode());
-                    return stateList;
-                case OPERATING:
-                    stateList.add(GroupStatus.DELETING.getCode());
-                    stateList.add(GroupStatus.SUSPENDING.getCode());
-                    stateList.add(GroupStatus.RESTARTING.getCode());
-                    return stateList;
-                case REJECTED:
-                    stateList.add(GroupStatus.APPROVE_REJECTED.getCode());
-                    return stateList;
-                case INITIALIZING:
-                    stateList.add(GroupStatus.TO_BE_APPROVAL.getCode());
-                    stateList.add(GroupStatus.APPROVE_PASSED.getCode());
-                    stateList.add(GroupStatus.CONFIG_ING.getCode());
-                    return stateList;
-                case FAILED:
-                    stateList.add(GroupStatus.CONFIG_FAILED.getCode());
-                    return stateList;
-                case STARTED:
-                    stateList.add(GroupStatus.RESTARTED.getCode());
-                    stateList.add(GroupStatus.CONFIG_SUCCESSFUL.getCode());
-                    return stateList;
-                case STOPPED:
-                    stateList.add(GroupStatus.SUSPENDED.getCode());
-                    return stateList;
-                case FINISHED:
-                    stateList.add(GroupStatus.FINISH.getCode());
-                    return stateList;
-                case DELETED:
-                    stateList.add(GroupStatus.DELETED.getCode());
-                    return stateList;
-                default:
-                    throw new IllegalArgumentException(String.format("Unsupported status %s for group", state));
-            }
         }
     }
 

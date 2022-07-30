@@ -17,12 +17,18 @@
 
 package org.apache.inlong.manager.service.mocks;
 
+import org.apache.inlong.manager.common.consts.InlongConstants;
+import org.apache.inlong.manager.common.enums.GroupOperateType;
+import org.apache.inlong.manager.common.pojo.workflow.form.process.GroupResourceProcessForm;
 import org.apache.inlong.manager.workflow.WorkflowContext;
 import org.apache.inlong.manager.workflow.event.ListenerResult;
-import org.apache.inlong.manager.workflow.event.task.DataSourceOperateListener;
+import org.apache.inlong.manager.workflow.event.task.SourceOperateListener;
 import org.apache.inlong.manager.workflow.event.task.TaskEvent;
 
-public class MockDeleteSourceListener implements DataSourceOperateListener {
+/**
+ * Test class for listen delete source event.
+ */
+public class MockDeleteSourceListener implements SourceOperateListener {
 
     @Override
     public TaskEvent event() {
@@ -30,12 +36,18 @@ public class MockDeleteSourceListener implements DataSourceOperateListener {
     }
 
     @Override
+    public boolean accept(WorkflowContext context) {
+        if (!isGroupProcessForm(context)) {
+            return false;
+        }
+        GroupResourceProcessForm processForm = (GroupResourceProcessForm) context.getProcessForm();
+        return InlongConstants.STANDARD_MODE.equals(processForm.getGroupInfo().getLightweight())
+                && processForm.getGroupOperateType() == GroupOperateType.DELETE;
+    }
+
+    @Override
     public ListenerResult listen(WorkflowContext context) {
         return ListenerResult.success("Mock delete source success");
     }
 
-    @Override
-    public boolean async() {
-        return false;
-    }
 }

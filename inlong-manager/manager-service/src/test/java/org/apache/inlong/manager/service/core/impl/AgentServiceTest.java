@@ -20,21 +20,21 @@ package org.apache.inlong.manager.service.core.impl;
 import org.apache.inlong.common.pojo.agent.TaskSnapshotMessage;
 import org.apache.inlong.common.pojo.agent.TaskSnapshotRequest;
 import org.apache.inlong.manager.common.enums.SourceType;
-import org.apache.inlong.manager.common.pojo.source.binlog.BinlogSourceRequest;
+import org.apache.inlong.manager.common.pojo.source.mysql.MySQLBinlogSourceRequest;
 import org.apache.inlong.manager.service.ServiceBaseTest;
 import org.apache.inlong.manager.service.core.AgentService;
 import org.apache.inlong.manager.service.source.StreamSourceService;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Collections;
 import java.util.Date;
 
 /**
- * Stream source service test
+ * Agent service test
  */
-public class AgentServiceTest extends ServiceBaseTest {
+class AgentServiceTest extends ServiceBaseTest {
 
     @Autowired
     private StreamSourceService sourceService;
@@ -43,19 +43,24 @@ public class AgentServiceTest extends ServiceBaseTest {
     @Autowired
     private InlongStreamServiceTest streamServiceTest;
 
+    /**
+     * Save source info.
+     */
     public Integer saveSource() {
         streamServiceTest.saveInlongStream(GLOBAL_GROUP_ID, GLOBAL_STREAM_ID, GLOBAL_OPERATOR);
-
-        BinlogSourceRequest sourceInfo = new BinlogSourceRequest();
+        MySQLBinlogSourceRequest sourceInfo = new MySQLBinlogSourceRequest();
         sourceInfo.setInlongGroupId(GLOBAL_GROUP_ID);
         sourceInfo.setInlongStreamId(GLOBAL_STREAM_ID);
         sourceInfo.setSourceType(SourceType.BINLOG.getType());
-        sourceInfo.setSourceName(GLOBAL_SOURCE_NAME);
+        sourceInfo.setSourceName("binlog_source_in_agent_service_test");
         return sourceService.save(sourceInfo, GLOBAL_OPERATOR);
     }
 
+    /**
+     * Test report snapshot.
+     */
     @Test
-    public void testReportSnapshot() {
+    void testReportSnapshot() {
         Integer id = this.saveSource();
 
         TaskSnapshotRequest request = new TaskSnapshotRequest();
@@ -68,9 +73,9 @@ public class AgentServiceTest extends ServiceBaseTest {
         request.setSnapshotList(Collections.singletonList(message));
 
         Boolean result = agentService.reportSnapshot(request);
-        Assert.assertTrue(result);
+        Assertions.assertTrue(result);
 
-        sourceService.delete(id, SourceType.BINLOG.getType(), GLOBAL_OPERATOR);
+        sourceService.delete(id, GLOBAL_OPERATOR);
     }
 
 }

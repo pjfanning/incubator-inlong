@@ -18,17 +18,23 @@
 package org.apache.inlong.manager.client.cli.pojo;
 
 import lombok.Data;
+import org.apache.inlong.manager.client.cli.util.ParseStatus;
 
 import java.util.Date;
 
+/**
+ * Sink info, including sink type, sink name, etc.
+ */
 @Data
 public class SinkInfo {
 
     private Integer id;
-    private Integer status;
     private String inlongGroupId;
     private String inlongStreamId;
     private String sinkType;
     private String sinkName;
+
+    @ParseStatus
+    private String status;
     private Date modifyTime;
 }

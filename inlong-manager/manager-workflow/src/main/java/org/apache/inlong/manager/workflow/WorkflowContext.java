@@ -17,12 +17,10 @@
 
 package org.apache.inlong.manager.workflow;
 
-import com.google.common.collect.Lists;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.inlong.manager.common.exceptions.WorkflowException;
-import org.apache.inlong.manager.common.pojo.workflow.form.ProcessForm;
-import org.apache.inlong.manager.common.pojo.workflow.form.TaskForm;
+import org.apache.inlong.manager.common.pojo.workflow.form.process.ProcessForm;
+import org.apache.inlong.manager.common.pojo.workflow.form.task.TaskForm;
 import org.apache.inlong.manager.dao.entity.WorkflowProcessEntity;
 import org.apache.inlong.manager.dao.entity.WorkflowTaskEntity;
 import org.apache.inlong.manager.workflow.definition.Element;
@@ -36,9 +34,9 @@ import java.util.List;
  */
 @Data
 @Slf4j
-public class WorkflowContext implements Cloneable {
+public class WorkflowContext {
 
-    private String applicant;
+    private String operator;
 
     private WorkflowProcess process;
 
@@ -48,16 +46,14 @@ public class WorkflowContext implements Cloneable {
 
     private WorkflowProcessEntity processEntity;
 
-    private List<WorkflowTaskEntity> newTaskList = Lists.newArrayList();
-
     private ActionContext actionContext;
 
-    public String getApplicant() {
-        return applicant;
+    public String getOperator() {
+        return operator;
     }
 
-    public WorkflowContext setApplicant(String applicant) {
-        this.applicant = applicant;
+    public WorkflowContext setOperator(String operator) {
+        this.operator = operator;
         return this;
     }
 
@@ -106,32 +102,7 @@ public class WorkflowContext implements Cloneable {
         return this;
     }
 
-    public List<WorkflowTaskEntity> getNewTaskList() {
-        return newTaskList;
-    }
-
-    public WorkflowContext setNewTaskList(List<WorkflowTaskEntity> newTaskList) {
-        this.newTaskList = newTaskList;
-        return this;
-    }
-
-    @Override
-    public WorkflowContext clone() {
-        try {
-            WorkflowContext workflowContext = (WorkflowContext) super.clone();
-            workflowContext.setProcess(process.clone());
-            workflowContext.setCurrentElement(currentElement.clone());
-            if (actionContext != null) {
-                workflowContext.setActionContext(actionContext.clone());
-            }
-            return workflowContext;
-        } catch (Exception e) {
-            log.error("workflow context clone failed", e);
-            throw new WorkflowException("workflow context clone failed " + this.getProcessEntity().getId());
-        }
-    }
-
-    public static class ActionContext implements Cloneable {
+    public static class ActionContext {
 
         private WorkflowAction action;
         private String operator;
@@ -202,15 +173,6 @@ public class WorkflowContext implements Cloneable {
         public ActionContext setTransferToUsers(List<String> transferToUsers) {
             this.transferToUsers = transferToUsers;
             return this;
-        }
-
-        @Override
-        protected ActionContext clone() throws CloneNotSupportedException {
-            ActionContext actionContext = (ActionContext) super.clone();
-            if (task != null) {
-                actionContext.setTask(task.clone());
-            }
-            return actionContext;
         }
     }
 

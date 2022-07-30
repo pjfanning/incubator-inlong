@@ -19,34 +19,37 @@ package org.apache.inlong.manager.client.api.transform;
 
 import io.swagger.annotations.ApiModel;
 import org.apache.inlong.manager.common.pojo.stream.StreamTransform;
-import org.apache.inlong.manager.client.api.util.AssertUtil;
 import org.apache.inlong.manager.common.pojo.transform.TransformDefinition;
+import org.apache.inlong.manager.common.util.Preconditions;
 
+/**
+ * StreamTransform with one pre stream node, such as filter, splitter, etc.
+ */
 @ApiModel("StreamTransform with one pre stream node, such as filter, splitter, etc")
 public class SingleDependencyTransform extends StreamTransform {
 
     /**
      * Constructor of SingleDependencyTransform
      *
-     * @param transformName
-     * @param transformDefinition
+     * @param transformName transform name
+     * @param transformDefinition definition info
      * @param preNode name of pre streamNode, if pre streamNode is streamSource, then preNode is sourceName
      *         if pre streamNode is streamTransform, preNode is transformName
      */
     public SingleDependencyTransform(String transformName, TransformDefinition transformDefinition, String preNode) {
-        AssertUtil.notNull(transformDefinition, "TransformDefinition should not be null");
+        Preconditions.checkNotNull(transformDefinition, "transform definition cannot be null");
         this.transformDefinition = transformDefinition;
-        AssertUtil.notNull(transformName, "TransformName should not be empty");
+        Preconditions.checkNotNull(transformName, "transform name cannot be null");
         this.transformName = transformName;
-        AssertUtil.notNull(preNode, "Pre streamNode should not be null");
+        Preconditions.checkNotNull(preNode, "pre nodes cannot be null");
         this.addPre(preNode);
     }
 
     /**
      * Constructor of SingleDependencyTransform
      *
-     * @param transformName
-     * @param transformDefinition
+     * @param transformName transform name
+     * @param transformDefinition definition info
      * @param preNode name of pre streamNode, if pre streamNode is streamSource, then preNode is sourceName
      *         if pre streamNode is streamTransform, preNode is transformName
      * @param postNodes name of post streamNode, if post streamNode is streamSource, then postNode is sourceName

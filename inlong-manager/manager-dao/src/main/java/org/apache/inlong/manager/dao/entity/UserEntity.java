@@ -17,10 +17,14 @@
 
 package org.apache.inlong.manager.dao.entity;
 
-import java.io.Serializable;
-import java.util.Date;
 import lombok.Data;
 
+import java.io.Serializable;
+import java.util.Date;
+
+/**
+ * User entity, including username, password, etc.
+ */
 @Data
 public class UserEntity implements Serializable {
 
@@ -28,10 +32,18 @@ public class UserEntity implements Serializable {
     private Integer id;
     private String name;
     private String password;
+    private String secretKey;
+    private String publicKey;
+    private String privateKey;
+    private Integer encryptVersion;
     private Integer accountType;
     private Date dueDate;
+
+    private Integer status;
+    private Integer isDeleted;
+    private String creator;
+    private String modifier;
     private Date createTime;
-    private Date updateTime;
-    private String createBy;
-    private String updateBy;
+    private Date modifyTime;
+    private Integer version;
 }

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-import React, { useState } from 'react';
+import React, { useState, forwardRef } from 'react';
 import { Button, Modal, message } from 'antd';
 import HighTable from '@/components/HighTable';
 import { defaultSize } from '@/configs/pagination';
@@ -28,7 +28,7 @@ import { dataSourcesFileColumns } from '@/components/MetaData/DataSourcesFile';
 import i18n from '@/i18n';
 import request from '@/utils/request';
 import { CommonInterface } from '../common';
-import { genStatusTag } from './status';
+import { statusList, genStatusTag } from './status';
 
 type Props = CommonInterface;
 
@@ -56,9 +56,19 @@ const getFilterFormContent = defaultValues => [
       ],
     },
   },
+  {
+    type: 'select',
+    name: 'status',
+    label: i18n.t('basic.Status'),
+    props: {
+      allowClear: true,
+      dropdownMatchSelectWidth: false,
+      options: statusList,
+    },
+  },
 ];
 
-const Comp: React.FC<Props> = ({ inlongGroupId }) => {
+const Comp = ({ inlongGroupId, readonly }: Props, ref) => {
   const [options, setOptions] = useState({
     // keyword: '',
     pageSize: defaultSize,
@@ -109,7 +119,7 @@ const Comp: React.FC<Props> = ({ inlongGroupId }) => {
 
   const onDelete = ({ id }) => {
     Modal.confirm({
-      title: i18n.t('pages.AccessDetail.DataSources.DeletConfirm'),
+      title: i18n.t('pages.AccessDetail.DataSources.DeleteConfirm'),
       onOk: async () => {
         await request({
           url: `/source/delete/${id}`,
@@ -162,16 +172,19 @@ const Comp: React.FC<Props> = ({ inlongGroupId }) => {
       {
         title: i18n.t('basic.Operating'),
         dataIndex: 'action',
-        render: (text, record) => (
-          <>
-            <Button type="link" onClick={() => onEdit(record)}>
-              {i18n.t('basic.Edit')}
-            </Button>
-            <Button type="link" onClick={() => onDelete(record)}>
-              {i18n.t('basic.Delete')}
-            </Button>
-          </>
-        ),
+        render: (text, record) =>
+          readonly ? (
+            '-'
+          ) : (
+            <>
+              <Button type="link" onClick={() => onEdit(record)}>
+                {i18n.t('basic.Edit')}
+              </Button>
+              <Button type="link" onClick={() => onDelete(record)}>
+                {i18n.t('basic.Delete')}
+              </Button>
+            </>
+          ),
       } as any,
     ]);
 
@@ -191,7 +204,6 @@ const Comp: React.FC<Props> = ({ inlongGroupId }) => {
               pageNum: 1,
               pageSize: 1000,
               inlongGroupId,
-              dataSourceType: options.sourceType,
             },
           },
           requestParams: {
@@ -216,9 +228,11 @@ const Comp: React.FC<Props> = ({ inlongGroupId }) => {
           onFilter,
         }}
         suffix={
-          <Button type="primary" onClick={() => setCreateModal({ visible: true })}>
-            {i18n.t('pages.AccessDetail.DataSources.Create')}
-          </Button>
+          !readonly && (
+            <Button type="primary" onClick={() => setCreateModal({ visible: true })}>
+              {i18n.t('pages.AccessDetail.DataSources.Create')}
+            </Button>
+          )
         }
         table={{
           columns,
@@ -245,4 +259,4 @@ const Comp: React.FC<Props> = ({ inlongGroupId }) => {
   );
 };
 
-export default Comp;
+export default forwardRef(Comp);

@@ -17,15 +17,22 @@
 
 package org.apache.inlong.agent.plugin.sources.reader;
 
-import static org.apache.inlong.agent.constant.CommonConstants.DEFAULT_PROXY_INLONG_GROUP_ID;
-import static org.apache.inlong.agent.constant.CommonConstants.DEFAULT_PROXY_INLONG_STREAM_ID;
-import static org.apache.inlong.agent.constant.CommonConstants.PROXY_INLONG_GROUP_ID;
-import static org.apache.inlong.agent.constant.CommonConstants.PROXY_INLONG_STREAM_ID;
-import static org.apache.inlong.agent.constant.JobConstants.JOB_KAFKA_BYTE_SPEED_LIMIT;
-import static org.apache.inlong.agent.constant.JobConstants.JOB_KAFKA_OFFSET;
-import static org.apache.inlong.agent.constant.JobConstants.JOB_KAFKA_PARTITION_OFFSET_DELIMITER;
-import static org.apache.inlong.agent.constant.JobConstants.JOB_KAFKA_RECORD_SPEED_LIMIT;
-import static org.apache.inlong.agent.constant.JobConstants.JOB_KAFKA_TOPIC;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.inlong.agent.conf.JobProfile;
+import org.apache.inlong.agent.message.DefaultMessage;
+import org.apache.inlong.agent.metrics.audit.AuditUtils;
+import org.apache.inlong.agent.plugin.Message;
+import org.apache.inlong.agent.plugin.Validator;
+import org.apache.inlong.agent.plugin.metrics.GlobalMetrics;
+import org.apache.inlong.agent.plugin.validator.PatternValidator;
+import org.apache.inlong.agent.utils.AgentUtils;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.TopicPartition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -36,28 +43,17 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.inlong.agent.conf.JobProfile;
-import org.apache.inlong.agent.message.DefaultMessage;
-import org.apache.inlong.agent.metrics.audit.AuditUtils;
-import org.apache.inlong.agent.plugin.Message;
-import org.apache.inlong.agent.plugin.Reader;
-import org.apache.inlong.agent.plugin.Validator;
-import org.apache.inlong.agent.plugin.metrics.PluginJmxMetric;
-import org.apache.inlong.agent.plugin.metrics.PluginMetric;
-import org.apache.inlong.agent.plugin.metrics.PluginPrometheusMetric;
-import org.apache.inlong.agent.plugin.validator.PatternValidator;
-import org.apache.inlong.agent.utils.AgentUtils;
-import org.apache.inlong.agent.utils.ConfigUtil;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.common.TopicPartition;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public class KafkaReader<K, V> implements Reader {
+import static org.apache.inlong.agent.constant.JobConstants.JOB_KAFKA_BYTE_SPEED_LIMIT;
+import static org.apache.inlong.agent.constant.JobConstants.JOB_KAFKA_OFFSET;
+import static org.apache.inlong.agent.constant.JobConstants.JOB_KAFKA_PARTITION_OFFSET_DELIMITER;
+import static org.apache.inlong.agent.constant.JobConstants.JOB_KAFKA_RECORD_SPEED_LIMIT;
+import static org.apache.inlong.agent.constant.JobConstants.JOB_KAFKA_TOPIC;
+
+/**
+ * read kafka data
+ */
+public class KafkaReader<K, V> extends AbstractReader {
 
     public static final int NEVER_STOP_SIGN = -1;
     private static final Logger LOGGER = LoggerFactory.getLogger(KafkaReader.class);
@@ -73,7 +69,6 @@ public class KafkaReader<K, V> implements Reader {
     /* total readBytes */
     private static AtomicLong currentTotalReadBytes = new AtomicLong(0);
     private static AtomicLong lastTotalReadBytes = new AtomicLong(0);
-    private final PluginMetric kafkaMetric;
     KafkaConsumer<K, V> consumer;
     long lastTimestamp;
     /* bps: records/s */
@@ -96,24 +91,12 @@ public class KafkaReader<K, V> implements Reader {
 
     /**
      * init attribute
-     *
-     * @param consumer
-     * @param paraMap
      */
     public KafkaReader(KafkaConsumer<K, V> consumer, Map<String, String> paraMap) {
         this.consumer = consumer;
-        // metrics total readRecords
-        if (ConfigUtil.isPrometheusEnabled()) {
-            kafkaMetric = new PluginPrometheusMetric(AgentUtils.getUniqId(
-                    KAFKA_READER_TAG_NAME, currentTotalReadRecords.incrementAndGet()));
-        } else {
-            kafkaMetric = new PluginJmxMetric(AgentUtils.getUniqId(
-                    KAFKA_READER_TAG_NAME, currentTotalReadRecords.incrementAndGet()));
-        }
-
-        this.recordSpeed = Long.valueOf(paraMap.getOrDefault(JOB_KAFKA_RECORD_SPEED_LIMIT, "10000"));
-        this.byteSpeed = Long.valueOf(paraMap.getOrDefault(JOB_KAFKA_BYTE_SPEED_LIMIT, String.valueOf(1024 * 1024)));
-        this.flowControlInterval = Long.valueOf(paraMap.getOrDefault(KAFKA_SOURCE_READ_MIN_INTERVAL, "1000"));
+        this.recordSpeed = Long.parseLong(paraMap.getOrDefault(JOB_KAFKA_RECORD_SPEED_LIMIT, "10000"));
+        this.byteSpeed = Long.parseLong(paraMap.getOrDefault(JOB_KAFKA_BYTE_SPEED_LIMIT, String.valueOf(1024 * 1024)));
+        this.flowControlInterval = Long.parseLong(paraMap.getOrDefault(KAFKA_SOURCE_READ_MIN_INTERVAL, "1000"));
         this.lastTimestamp = System.currentTimeMillis();
         this.topic = paraMap.get(JOB_KAFKA_TOPIC);
 
@@ -139,7 +122,7 @@ public class KafkaReader<K, V> implements Reader {
                         "partition:" + record.partition()
                                 + ", value:" + new String(recordValue) + ", offset:" + record.offset());
                 // control speed
-                kafkaMetric.incReadNum();
+                GlobalMetrics.incReadNum(metricTagName);
                 // commit succeed,then record current offset
                 snapshot = record.partition() + JOB_KAFKA_PARTITION_OFFSET_DELIMITER + record.offset();
                 DefaultMessage message = new DefaultMessage(recordValue, headerMap);
@@ -181,19 +164,19 @@ public class KafkaReader<K, V> implements Reader {
     }
 
     @Override
-    public void setWaitMillisecs(long millis) {
+    public void setWaitMillisecond(long millis) {
         waitTimeout = millis;
     }
 
     @Override
     public void init(JobProfile jobConf) {
+        super.init(jobConf);
+        metricTagName = KAFKA_READER_TAG_NAME + "_" + inlongGroupId;
         // get offset from jobConf
         snapshot = jobConf.get(JOB_KAFKA_OFFSET, null);
         initReadTimeout(jobConf);
         // fetch data
         fetchData(5000);
-        inlongGroupId = jobConf.get(PROXY_INLONG_GROUP_ID, DEFAULT_PROXY_INLONG_GROUP_ID);
-        inlongStreamId = jobConf.get(PROXY_INLONG_STREAM_ID, DEFAULT_PROXY_INLONG_STREAM_ID);
     }
 
     @Override
@@ -222,6 +205,11 @@ public class KafkaReader<K, V> implements Reader {
         return validators.stream().allMatch(v -> v.validate(new String(message)));
     }
 
+    /**
+     * add specified pattern to validators
+     *
+     * @param pattern specified pattern
+     */
     public void addPatternValidator(String pattern) {
         if (pattern.isEmpty()) {
             return;

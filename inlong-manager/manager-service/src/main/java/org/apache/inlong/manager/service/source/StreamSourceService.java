@@ -18,12 +18,14 @@
 package org.apache.inlong.manager.service.source;
 
 import com.github.pagehelper.PageInfo;
-import org.apache.inlong.manager.common.pojo.source.SourceListResponse;
+import org.apache.inlong.manager.common.pojo.group.InlongGroupInfo;
 import org.apache.inlong.manager.common.pojo.source.SourcePageRequest;
 import org.apache.inlong.manager.common.pojo.source.SourceRequest;
-import org.apache.inlong.manager.common.pojo.source.SourceResponse;
+import org.apache.inlong.manager.common.pojo.source.StreamSource;
+import org.apache.inlong.manager.common.pojo.stream.InlongStreamInfo;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * Service layer interface for stream source
@@ -40,13 +42,12 @@ public interface StreamSourceService {
     Integer save(SourceRequest request, String operator);
 
     /**
-     * Query source information based on id and type.
+     * Query source information based on id
      *
      * @param id source id.
-     * @param sourceType Source type.
      * @return Source info
      */
-    SourceResponse get(Integer id, String sourceType);
+    StreamSource get(Integer id);
 
     /**
      * Query source information based on inlong group id and inlong stream id.
@@ -55,7 +56,19 @@ public interface StreamSourceService {
      * @param streamId Inlong stream id, can be null.
      * @return Source info list.
      */
-    List<SourceResponse> listSource(String groupId, String streamId);
+    List<StreamSource> listSource(String groupId, String streamId);
+
+    /**
+     * Get the StreamSource Map by the inlong group info and inlong stream info list.
+     * <p/>
+     * If the group mode is LIGHTWEIGHT, means not using any MQ as a cached source, then just get all related sources.
+     * Otherwise, if the group mode is STANDARD, need get the cached MQ sources.
+     *
+     * @param groupInfo inlong group info
+     * @param streamInfos inlong stream info list
+     * @return map of StreamSource list, key-inlongStreamId, value-StreamSourceList
+     */
+    Map<String, List<StreamSource>> getSourcesMap(InlongGroupInfo groupInfo, List<InlongStreamInfo> streamInfos);
 
     /**
      * Query the number of undeleted source info based on inlong group and inlong stream id.
@@ -69,10 +82,10 @@ public interface StreamSourceService {
     /**
      * Paging query source information based on conditions.
      *
-     * @param request Paging request.
-     * @return Source info list.
+     * @param request paging request.
+     * @return source list
      */
-    PageInfo<? extends SourceListResponse> listByCondition(SourcePageRequest request);
+    PageInfo<? extends StreamSource> listByCondition(SourcePageRequest request);
 
     /**
      * Modify data source information
@@ -81,7 +94,7 @@ public interface StreamSourceService {
      * @param operator Operator's name
      * @return whether succeed
      */
-    boolean update(SourceRequest sourceRequest, String operator);
+    Boolean update(SourceRequest sourceRequest, String operator);
 
     /**
      * Update source status by the given groupId and streamId
@@ -92,57 +105,54 @@ public interface StreamSourceService {
      * @param operator The operator name.
      * @return whether succeed
      */
-    boolean updateStatus(String groupId, String streamId, Integer targetStatus, String operator);
+    Boolean updateStatus(String groupId, String streamId, Integer targetStatus, String operator);
 
     /**
      * Delete the stream source by the given id and source type.
      *
      * @param id The primary key of the source.
-     * @param sourceType Source type.
      * @param operator Operator's name
      * @return Whether succeed
      */
-    boolean delete(Integer id, String sourceType, String operator);
+    Boolean delete(Integer id, String operator);
 
     /**
      * Delete the stream source by the given id and source type.
      *
      * @param id The primary key of the source.
-     * @param sourceType Source type.
      * @param operator Operator's name
      * @return Whether succeed
      */
-    boolean restart(Integer id, String sourceType, String operator);
+    Boolean restart(Integer id, String operator);
 
     /**
      * Delete the stream source by the given id and source type.
      *
      * @param id The primary key of the source.
-     * @param sourceType Source type.
      * @param operator Operator's name
      * @return Whether succeed
      */
-    boolean stop(Integer id, String sourceType, String operator);
+    Boolean stop(Integer id, String operator);
 
     /**
      * Logically delete stream source with the given conditions.
      *
-     * @param groupId InLong group id to which the data source belongs.
-     * @param streamId InLong stream id to which the data source belongs.
+     * @param groupId Inlong group id to which the data source belongs.
+     * @param streamId Inlong stream id to which the data source belongs.
      * @param operator Operator's name
      * @return Whether succeed.
      */
-    boolean logicDeleteAll(String groupId, String streamId, String operator);
+    Boolean logicDeleteAll(String groupId, String streamId, String operator);
 
     /**
      * Physically delete stream source with the given conditions.
      *
-     * @param groupId InLong group id.
-     * @param streamId InLong stream id.
+     * @param groupId Inlong group id.
+     * @param streamId Inlong stream id.
      * @param operator Operator's name
      * @return Whether succeed.
      */
-    boolean deleteAll(String groupId, String streamId, String operator);
+    Boolean deleteAll(String groupId, String streamId, String operator);
 
     /**
      * According to the inlong stream id, query the list of source types owned by it.

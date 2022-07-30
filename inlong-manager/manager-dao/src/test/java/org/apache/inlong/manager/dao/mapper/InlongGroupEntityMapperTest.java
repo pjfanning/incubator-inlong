@@ -17,14 +17,18 @@
 
 package org.apache.inlong.manager.dao.mapper;
 
+import org.apache.inlong.manager.common.consts.InlongConstants;
 import org.apache.inlong.manager.dao.DaoBaseTest;
 import org.apache.inlong.manager.dao.entity.InlongGroupEntity;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Date;
 
+/**
+ * Inlong group entity mapper test for {@link InlongGroupEntityMapper}
+ */
 public class InlongGroupEntityMapperTest extends DaoBaseTest {
 
     @Autowired
@@ -32,34 +36,31 @@ public class InlongGroupEntityMapperTest extends DaoBaseTest {
 
     @Test
     public void deleteByPrimaryKey() {
-        InlongGroupEntity entity = createHeartbeatEntity();
+        InlongGroupEntity entity = createGroupEntity();
         groupEntityMapper.insert(entity);
         groupEntityMapper.deleteByPrimaryKey(entity.getId());
-        Assert.assertNull(groupEntityMapper.selectByGroupId(entity.getInlongGroupId()));
-    }
-
-    @Test
-    public void insertSelective() {
-        InlongGroupEntity entity = createHeartbeatEntity();
-        groupEntityMapper.insertSelective(entity);
-        InlongGroupEntity queryResult = groupEntityMapper.selectByGroupId(entity.getInlongGroupId());
-        Assert.assertNotNull(queryResult);
+        Assertions.assertNull(groupEntityMapper.selectByGroupId(entity.getInlongGroupId()));
     }
 
     @Test
     public void selectByPrimaryKey() {
-        InlongGroupEntity entity = createHeartbeatEntity();
+        InlongGroupEntity entity = createGroupEntity();
         groupEntityMapper.insert(entity);
-        Assert.assertEquals(entity, groupEntityMapper.selectByPrimaryKey(entity.getId()));
+        InlongGroupEntity groupEntity = groupEntityMapper.selectByPrimaryKey(entity.getId());
+        Assertions.assertEquals(entity.getInlongGroupId(), groupEntity.getInlongGroupId());
     }
 
-    private InlongGroupEntity createHeartbeatEntity() {
+    private InlongGroupEntity createGroupEntity() {
         InlongGroupEntity entity = new InlongGroupEntity();
         entity.setInlongGroupId("test_group");
-        entity.setMqResourceObj("test_group");
+        entity.setMqResource("test_group");
         entity.setInCharges("admin");
         entity.setCreator("admin");
-        entity.setCreateTime(new Date());
+        entity.setModifier("admin");
+        Date now = new Date();
+        entity.setCreateTime(now);
+        entity.setModifyTime(now);
+        entity.setVersion(InlongConstants.INITIAL_VERSION);
         return entity;
     }
 

@@ -18,6 +18,7 @@
 package org.apache.inlong.manager.plugin.util;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -27,6 +28,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -34,6 +36,9 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Util of flink.
+ */
 @Slf4j
 public class FlinkUtils {
 
@@ -71,19 +76,40 @@ public class FlinkUtils {
 
     /**
      * fetch sort-single-tenant jar path
+     *
+     * @param baseDirName base directory name.
+     * @param pattern pattern of file
+     * @return sort-single-tenant jar path
      */
-    public static String findFiles(String baseDirName, String pattern) {
+    public static String findFile(String baseDirName, String pattern) {
+        List<String> files = listFiles(baseDirName, pattern, 1);
+        if (CollectionUtils.isEmpty(files)) {
+            return null;
+        }
+        return files.get(0);
+    }
+
+    /**
+     * fetch target file path
+     *
+     * @param baseDirName base directory name.
+     * @param pattern pattern of file
+     * @return matched files
+     */
+    public static List<String> listFiles(String baseDirName, String pattern, int limit) {
+        List<String> result = new ArrayList<>();
+
         File baseDir = new File(baseDirName);
         if (!baseDir.exists() || !baseDir.isDirectory()) {
             log.error("baseDirName find fail :{}", baseDirName);
-            return null;
+            return result;
         }
         String tempName;
         File tempFile;
         File[] files = baseDir.listFiles();
         if (files == null || files.length == 0) {
             log.info("baseDirName is empty");
-            return null;
+            return result;
         }
         for (File file : files) {
             tempFile = file;
@@ -92,10 +118,13 @@ public class FlinkUtils {
             Matcher matcher = jarPathPattern.matcher(tempName);
             boolean matches = matcher.matches();
             if (matches) {
-                return tempFile.getAbsoluteFile().toString();
+                result.add(tempFile.getAbsoluteFile().toString());
+            }
+            if (limit > 0 && result.size() >= limit) {
+                return result;
             }
         }
-        return null;
+        return result;
     }
 
     /**
@@ -107,6 +136,9 @@ public class FlinkUtils {
 
     /**
      * getConfigDirectory
+     *
+     * @param name config file name
+     * @return config file directory
      */
     public static String getConfigDirectory(String name) {
         return BASE_DIRECTORY + File.separator + name;
@@ -114,6 +146,11 @@ public class FlinkUtils {
 
     /**
      * writeConfigToFile
+     *
+     * @param configJobDirectory job config directory
+     * @param configFileName config file name
+     * @param content contents of the file to be written
+     * @return whether success
      */
     public static boolean writeConfigToFile(String configJobDirectory, String configFileName, String content) {
         File file = new File(configJobDirectory);
@@ -135,7 +172,10 @@ public class FlinkUtils {
     }
 
     /**
-     * delete configuration file
+     * Delete configuration file
+     *
+     * @param name file config info
+     * @return whether sucess
      */
     public static boolean deleteConfigFile(String name) {
         String configDirectory = getConfigDirectory(name);

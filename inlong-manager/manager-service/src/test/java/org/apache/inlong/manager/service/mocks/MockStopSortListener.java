@@ -17,11 +17,17 @@
 
 package org.apache.inlong.manager.service.mocks;
 
+import org.apache.inlong.manager.common.enums.GroupOperateType;
+import org.apache.inlong.manager.common.pojo.workflow.form.process.GroupResourceProcessForm;
+import org.apache.inlong.manager.common.pojo.workflow.form.process.ProcessForm;
 import org.apache.inlong.manager.workflow.WorkflowContext;
 import org.apache.inlong.manager.workflow.event.ListenerResult;
 import org.apache.inlong.manager.workflow.event.task.SortOperateListener;
 import org.apache.inlong.manager.workflow.event.task.TaskEvent;
 
+/**
+ * Test class for listen stop sort event.
+ */
 public class MockStopSortListener implements SortOperateListener {
 
     @Override
@@ -30,13 +36,18 @@ public class MockStopSortListener implements SortOperateListener {
     }
 
     @Override
-    public ListenerResult listen(WorkflowContext context) {
-        return ListenerResult.success("Mock stop sort success");
+    public boolean accept(WorkflowContext context) {
+        ProcessForm processForm = context.getProcessForm();
+        if (!(processForm instanceof GroupResourceProcessForm)) {
+            return false;
+        }
+        GroupResourceProcessForm form = (GroupResourceProcessForm) processForm;
+        return form.getGroupOperateType() == GroupOperateType.SUSPEND;
     }
 
     @Override
-    public boolean async() {
-        return false;
+    public ListenerResult listen(WorkflowContext context) {
+        return ListenerResult.success("Mock stop sort success");
     }
 
 }

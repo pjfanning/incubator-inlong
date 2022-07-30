@@ -20,7 +20,12 @@ package org.apache.inlong.manager.common.pojo.stream;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import org.apache.inlong.manager.common.enums.DataSeparator;
+import org.hibernate.validator.constraints.Length;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Pattern;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -33,9 +38,14 @@ public class InlongStreamRequest {
     @ApiModelProperty(value = "Primary key")
     private Integer id;
 
+    @NotBlank(message = "inlongGroupId cannot be blank")
     @ApiModelProperty(value = "Inlong group id")
     private String inlongGroupId;
 
+    @NotBlank(message = "inlongStreamId cannot be blank")
+    @Length(min = 4, max = 100, message = "inlongStreamId length must be between 4 and 100")
+    @Pattern(regexp = "^[a-z0-9_-]{4,100}$",
+            message = "inlongStreamId only supports lowercase letters, numbers, '-', or '_'")
     @ApiModelProperty(value = "Inlong stream id")
     private String inlongStreamId;
 
@@ -45,32 +55,25 @@ public class InlongStreamRequest {
     @ApiModelProperty(value = "Inlong stream description")
     private String description;
 
-    @ApiModelProperty(value = "MQ resource object, in inlong group",
-            notes = "Tube corresponds to Topic, Pulsar corresponds to Namespace")
-    private String mqResourceObj;
-
-    @ApiModelProperty(value = "Data storage period, unit: day (required when dataSourceType=AUTO_PUSH)")
-    private Integer storagePeriod;
+    @ApiModelProperty(value = "MQ resource")
+    private String mqResource;
 
     @ApiModelProperty(value = "Data type, including: TEXT, KV, etc.")
     private String dataType;
 
     @ApiModelProperty(value = "Data encoding format: UTF-8, GBK")
-    private String dataEncoding;
+    private String dataEncoding = StandardCharsets.UTF_8.toString();
 
     @ApiModelProperty(value = "Data separator, stored as ASCII code")
-    private String dataSeparator;
+    private String dataSeparator = DataSeparator.VERTICAL_BAR.getAsciiCode().toString();
 
     @ApiModelProperty(value = "Data field escape symbol, stored as ASCII code")
     private String dataEscapeChar;
 
-    @ApiModelProperty(value = "(File and DB access) Whether there are predefined fields, 0: no, 1: yes")
-    private Integer havePredefinedFields;
-
     @ApiModelProperty(value = "Whether to send synchronously, 0: no, 1: yes",
             notes = "Each task under this stream sends data synchronously, "
                     + "which will affect the throughput of data collection, please choose carefully")
-    private Integer syncSend;
+    private Integer syncSend = 0;
 
     @ApiModelProperty(value = "Number of access items per day, unit: 10,000 items per day")
     private Integer dailyRecords;
@@ -84,13 +87,19 @@ public class InlongStreamRequest {
     @ApiModelProperty(value = "The maximum length of a single piece of data, unit: Byte")
     private Integer maxLength;
 
-    @ApiModelProperty(value = "Names of responsible persons, separated by commas")
-    private String inCharges;
+    @ApiModelProperty(value = "Data storage period, unit: day")
+    private Integer storagePeriod;
 
-    @ApiModelProperty(value = "StreamPipeline snapshot of stream,, string in JSON format")
-    private String tempView;
+    @ApiModelProperty(value = "Extended params, will be saved as JSON string")
+    private String extParams;
 
     @ApiModelProperty(value = "Field list")
-    private List<InlongStreamFieldInfo> fieldList;
+    private List<StreamField> fieldList;
+
+    @ApiModelProperty(value = "Inlong stream Extension properties")
+    private List<InlongStreamExtInfo> extList;
+
+    @ApiModelProperty(value = "Version number")
+    private Integer version;
 
 }

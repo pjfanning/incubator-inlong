@@ -17,19 +17,30 @@
 
 package org.apache.inlong.common.enums;
 
-import static java.util.Objects.requireNonNull;
-
 public enum TaskTypeEnum {
-    DATABASE_MIGRATION(0),SQL(1), BINLOG(2), FILE(3), KAFKA(4);
 
-    private int type;
+    DATABASE_MIGRATION(0),
+    SQL(1),
+    BINLOG(2),
+    FILE(3),
+    KAFKA(4),
+    PULSAR(5),
+    POSTGRES(6),
+    ORACLE(7),
+    SQLSERVER(8),
+    MONGODB(9),
+    TUBEMQ(10)
+
+
+    ;
+
+    private final int type;
 
     TaskTypeEnum(int type) {
         this.type = type;
     }
 
     public static TaskTypeEnum getTaskType(int taskType) {
-        requireNonNull(taskType);
         switch (taskType) {
             case 0:
                 return DATABASE_MIGRATION;
@@ -41,12 +52,25 @@ public enum TaskTypeEnum {
                 return FILE;
             case 4:
                 return KAFKA;
+            case 5:
+                return PULSAR;
+            case 6:
+                return POSTGRES;
+            case 7:
+                return ORACLE;
+            case 8:
+                return SQLSERVER;
+            case 9:
+                return MONGODB;
+            case 10:
+                return TUBEMQ;
             default:
-                throw new RuntimeException("such task type doesn't exist");
+                throw new RuntimeException(String.format("Unsupported taskType=%s", taskType));
         }
     }
 
     public int getType() {
         return type;
     }
+
 }

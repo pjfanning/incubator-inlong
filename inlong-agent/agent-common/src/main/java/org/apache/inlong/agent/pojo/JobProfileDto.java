@@ -74,6 +74,8 @@ public class JobProfileDto {
         BinlogJob.Offset offset = new BinlogJob.Offset();
         offset.setIntervalMs(binlogJobTaskConfig.getIntervalMs());
         offset.setFilename(binlogJobTaskConfig.getOffsetFilename());
+        offset.setSpecificOffsetFile(binlogJobTaskConfig.getSpecificOffsetFile());
+        offset.setSpecificOffsetPos(binlogJobTaskConfig.getSpecificOffsetPos());
 
         binlogJob.setOffset(offset);
 
@@ -101,6 +103,7 @@ public class JobProfileDto {
         FileJob.Dir dir = new FileJob.Dir();
         dir.setPattern(fileJobTaskConfig.getPattern());
         fileJob.setDir(dir);
+        fileJob.setCollectType(fileJobTaskConfig.getCollectType());
 
         if (fileJobTaskConfig.getTimeOffset() != null) {
             fileJob.setTimeOffset(fileJobTaskConfig.getTimeOffset());
@@ -155,6 +158,9 @@ public class JobProfileDto {
         return proxy;
     }
 
+    /**
+     * convert DataConfig to TriggerProfile
+     */
     public static TriggerProfile convertToTriggerProfile(DataConfig dataConfigs) {
         if (!dataConfigs.isValid()) {
             throw new IllegalArgumentException("input dataConfig" + dataConfigs + "is invalid please check");

@@ -22,7 +22,6 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.inlong.common.constant.Constants;
 import org.apache.inlong.common.db.CommandEntity;
-import org.apache.inlong.common.enums.ComponentTypeEnum;
 import org.apache.inlong.common.enums.PullJobTypeEnum;
 import org.apache.inlong.common.pojo.agent.CmdConfig;
 import org.apache.inlong.common.pojo.agent.DataConfig;
@@ -33,15 +32,13 @@ import org.apache.inlong.manager.common.enums.SourceStatus;
 import org.apache.inlong.manager.common.enums.SourceType;
 import org.apache.inlong.manager.common.exceptions.BusinessException;
 import org.apache.inlong.manager.common.pojo.source.file.FileSourceDTO;
-import org.apache.inlong.manager.common.pojo.stream.InlongStreamConfigLogRequest;
 import org.apache.inlong.manager.dao.entity.InlongStreamEntity;
 import org.apache.inlong.manager.dao.entity.StreamSourceEntity;
 import org.apache.inlong.manager.dao.mapper.DataSourceCmdConfigEntityMapper;
 import org.apache.inlong.manager.dao.mapper.InlongStreamEntityMapper;
 import org.apache.inlong.manager.dao.mapper.StreamSourceEntityMapper;
 import org.apache.inlong.manager.service.core.AgentService;
-import org.apache.inlong.manager.service.core.StreamConfigLogService;
-import org.apache.inlong.manager.service.source.SourceSnapshotOperation;
+import org.apache.inlong.manager.service.source.SourceSnapshotOperator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,11 +49,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * Agent service layer implementation
+ */
 @Service
 public class AgentServiceImpl implements AgentService {
 
@@ -69,17 +68,15 @@ public class AgentServiceImpl implements AgentService {
     @Autowired
     private StreamSourceEntityMapper sourceMapper;
     @Autowired
-    private SourceSnapshotOperation snapshotOperation;
+    private SourceSnapshotOperator snapshotOperator;
     @Autowired
     private DataSourceCmdConfigEntityMapper sourceCmdConfigMapper;
     @Autowired
     private InlongStreamEntityMapper streamMapper;
-    @Autowired
-    private StreamConfigLogService streamConfigLogService;
 
     @Override
     public Boolean reportSnapshot(TaskSnapshotRequest request) {
-        return snapshotOperation.snapshot(request);
+        return snapshotOperator.snapshot(request);
     }
 
     @Override
@@ -103,9 +100,14 @@ public class AgentServiceImpl implements AgentService {
         }
     }
 
+    /**
+     * Update task status by command.
+     *
+     * @param command command info.
+     */
     private void updateTaskStatus(CommandEntity command) {
         Integer taskId = command.getTaskId();
-        StreamSourceEntity current = sourceMapper.selectByIdForUpdate(taskId);
+        StreamSourceEntity current = sourceMapper.selectForAgentTask(taskId);
         if (current == null) {
             LOGGER.warn("stream source not found by id={}, just return", taskId);
             return;
@@ -122,7 +124,6 @@ public class AgentServiceImpl implements AgentService {
         int nextStatus = SourceStatus.SOURCE_NORMAL.getCode();
 
         if (Constants.RESULT_FAIL == result) {
-            logFailedStreamSource(current);
             nextStatus = SourceStatus.SOURCE_FAILED.getCode();
         } else if (previousStatus / MODULUS_100 == ISSUED_STATUS) {
             // Change the status from 30x to normal / disable / frozen
@@ -141,9 +142,6 @@ public class AgentServiceImpl implements AgentService {
         }
     }
 
-    /**
-     * Get task result by the request
-     */
     @Override
     @Transactional(rollbackFor = Throwable.class, isolation = Isolation.READ_COMMITTED,
             propagation = Propagation.REQUIRES_NEW)
@@ -189,7 +187,7 @@ public class AgentServiceImpl implements AgentService {
         for (StreamSourceEntity entity : entityList) {
             // Change 20x to 30x
             int id = entity.getId();
-            entity = sourceMapper.selectByIdForUpdate(id);
+            entity = sourceMapper.selectForAgentTask(id);
             int status = entity.getStatus();
             int op = status % MODULUS_100;
             if (status / MODULUS_100 == UNISSUED_STATUS) {
@@ -219,25 +217,11 @@ public class AgentServiceImpl implements AgentService {
     }
 
     /**
-     * If status of source is failed, record.
+     * Get the DataConfig from the stream source entity.
      *
-     * @param entity
-     */
-    private void logFailedStreamSource(StreamSourceEntity entity) {
-        InlongStreamConfigLogRequest request = new InlongStreamConfigLogRequest();
-        request.setInlongGroupId(entity.getInlongGroupId());
-        request.setInlongStreamId(entity.getInlongStreamId());
-        request.setComponentName(ComponentTypeEnum.Agent.getName());
-        request.setIp(entity.getAgentIp());
-        request.setConfigName("DataSource:" + entity.getSourceName());
-        request.setLogType(1);
-        request.setLogInfo(String.format("StreamSource=%s init failed, please check!", entity));
-        request.setReportTime(new Date().getTime());
-        streamConfigLogService.reportConfigLog(request);
-    }
-
-    /**
-     * Get the DataConfig from the stream source entity
+     * @param entity stream source entity.
+     * @param op operation code for add, delete, etc.
+     * @return data config.
      */
     private DataConfig getDataConfig(StreamSourceEntity entity, int op) {
         DataConfig dataConfig = new DataConfig();
@@ -265,11 +249,23 @@ public class AgentServiceImpl implements AgentService {
         return dataConfig;
     }
 
+    /**
+     * Get the Task type from the stream source entity.
+     *
+     * @param sourceEntity stream source info.
+     * @return task type
+     */
     private int getTaskType(StreamSourceEntity sourceEntity) {
         SourceType sourceType = SourceType.forType(sourceEntity.getSourceType());
         return sourceType.getTaskType().getType();
     }
 
+    /**
+     * Get the agent command config by the agent ip.
+     *
+     * @param taskRequest task request info.
+     * @return agent command config list.
+     */
     private List<CmdConfig> getAgentCmdConfigs(TaskRequest taskRequest) {
         return sourceCmdConfigMapper.queryCmdByAgentIp(taskRequest.getAgentIp()).stream().map(cmd -> {
             CmdConfig cmdConfig = new CmdConfig();

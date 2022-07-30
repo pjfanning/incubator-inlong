@@ -21,6 +21,9 @@ import lombok.Data;
 
 import java.io.Serializable;
 
+/**
+ * Stream sink field entity, including field name, field length, etc.
+ */
 @Data
 public class StreamSinkFieldEntity implements Serializable {
 
@@ -37,13 +40,10 @@ public class StreamSinkFieldEntity implements Serializable {
     private Integer isRequired;
     private String sourceFieldName;
     private String sourceFieldType;
-
-    private Integer fieldLength;
-    private Integer fieldPrecision;
-    private Integer fieldScale;
-    private String partitionStrategy;
+    private String extParams;
 
     private Integer isMetaField;
+    private String metaFieldName;
     private String fieldFormat;
     private Short rankNum;
     private Integer isDeleted;

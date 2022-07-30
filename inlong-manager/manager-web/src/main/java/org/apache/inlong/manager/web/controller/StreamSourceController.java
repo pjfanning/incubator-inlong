@@ -20,14 +20,13 @@ package org.apache.inlong.manager.web.controller;
 import com.github.pagehelper.PageInfo;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
-import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 import org.apache.inlong.manager.common.beans.Response;
 import org.apache.inlong.manager.common.enums.OperationType;
-import org.apache.inlong.manager.common.pojo.source.SourceListResponse;
+import org.apache.inlong.manager.common.pojo.common.UpdateValidation;
 import org.apache.inlong.manager.common.pojo.source.SourcePageRequest;
 import org.apache.inlong.manager.common.pojo.source.SourceRequest;
-import org.apache.inlong.manager.common.pojo.source.SourceResponse;
+import org.apache.inlong.manager.common.pojo.source.StreamSource;
 import org.apache.inlong.manager.common.util.LoginUserUtils;
 import org.apache.inlong.manager.service.core.operationlog.OperationLog;
 import org.apache.inlong.manager.service.source.StreamSourceService;
@@ -37,59 +36,52 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Stream source control layer
  */
 @RestController
-@RequestMapping("/source")
-@Api(tags = "Stream source config")
+@RequestMapping("/api")
+@Api(tags = "Stream-Source-API")
 public class StreamSourceController {
 
     @Autowired
     StreamSourceService sourceService;
 
-    @RequestMapping(value = "/save", method = RequestMethod.POST)
+    @RequestMapping(value = "/source/save", method = RequestMethod.POST)
     @OperationLog(operation = OperationType.CREATE)
     @ApiOperation(value = "Save stream source")
     public Response<Integer> save(@Validated @RequestBody SourceRequest request) {
-        return Response.success(sourceService.save(request, LoginUserUtils.getLoginUserDetail().getUserName()));
+        return Response.success(sourceService.save(request, LoginUserUtils.getLoginUser().getName()));
     }
 
-    @RequestMapping(value = "/get/{id}", method = RequestMethod.GET)
-    @ApiOperation(value = "Query stream source")
-    @ApiImplicitParams({
-            @ApiImplicitParam(name = "id", dataTypeClass = Integer.class, required = true),
-            @ApiImplicitParam(name = "sourceType", dataTypeClass = String.class, required = true)
-    })
-    public Response<SourceResponse> get(@PathVariable Integer id, @RequestParam String sourceType) {
-        return Response.success(sourceService.get(id, sourceType));
+    @RequestMapping(value = "/source/get/{id}", method = RequestMethod.GET)
+    @ApiOperation(value = "Get stream source")
+    @ApiImplicitParam(name = "id", dataTypeClass = Integer.class, required = true)
+    public Response<StreamSource> get(@PathVariable Integer id) {
+        return Response.success(sourceService.get(id));
     }
 
-    @RequestMapping(value = "/list", method = RequestMethod.GET)
-    @ApiOperation(value = "Query stream source list")
-    public Response<PageInfo<? extends SourceListResponse>> listByCondition(SourcePageRequest request) {
+    @RequestMapping(value = "/source/list", method = RequestMethod.GET)
+    @ApiOperation(value = "Get stream source list by paginating")
+    public Response<PageInfo<? extends StreamSource>> listByCondition(SourcePageRequest request) {
         return Response.success(sourceService.listByCondition(request));
     }
 
-    @RequestMapping(value = "/update", method = RequestMethod.POST)
+    @RequestMapping(value = "/source/update", method = RequestMethod.POST)
     @OperationLog(operation = OperationType.UPDATE)
-    @ApiOperation(value = "Modify stream source")
-    public Response<Boolean> update(@Validated @RequestBody SourceRequest request) {
-        return Response.success(sourceService.update(request, LoginUserUtils.getLoginUserDetail().getUserName()));
+    @ApiOperation(value = "Update stream source")
+    public Response<Boolean> update(@Validated(UpdateValidation.class) @RequestBody SourceRequest request) {
+        return Response.success(sourceService.update(request, LoginUserUtils.getLoginUser().getName()));
     }
 
-    @RequestMapping(value = "/delete/{id}", method = RequestMethod.DELETE)
+    @RequestMapping(value = "/source/delete/{id}", method = RequestMethod.DELETE)
     @OperationLog(operation = OperationType.DELETE)
     @ApiOperation(value = "Delete stream source")
-    @ApiImplicitParams({
-            @ApiImplicitParam(name = "id", dataTypeClass = Integer.class, required = true),
-            @ApiImplicitParam(name = "sourceType", dataTypeClass = String.class, required = true)
-    })
-    public Response<Boolean> delete(@PathVariable Integer id, @RequestParam String sourceType) {
-        boolean result = sourceService.delete(id, sourceType, LoginUserUtils.getLoginUserDetail().getUserName());
+    @ApiImplicitParam(name = "id", dataTypeClass = Integer.class, required = true)
+    public Response<Boolean> delete(@PathVariable Integer id) {
+        boolean result = sourceService.delete(id, LoginUserUtils.getLoginUser().getName());
         return Response.success(result);
     }
 

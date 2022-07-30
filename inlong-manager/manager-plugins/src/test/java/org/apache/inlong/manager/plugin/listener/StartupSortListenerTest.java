@@ -18,39 +18,40 @@
 package org.apache.inlong.manager.plugin.listener;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.inlong.manager.common.consts.InlongConstants;
 import org.apache.inlong.manager.common.pojo.group.InlongGroupExtInfo;
-import org.apache.inlong.manager.common.pojo.group.InlongGroupInfo;
-import org.apache.inlong.manager.common.pojo.workflow.form.GroupResourceProcessForm;
-import org.apache.inlong.manager.common.settings.InlongGroupSettings;
+import org.apache.inlong.manager.common.pojo.group.pulsar.InlongPulsarInfo;
+import org.apache.inlong.manager.common.pojo.workflow.form.process.GroupResourceProcessForm;
 import org.apache.inlong.manager.workflow.WorkflowContext;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Test class for start up sort listener.
+ */
 public class StartupSortListenerTest {
 
     @Test
     public void testListener() throws Exception {
-
         WorkflowContext context = new WorkflowContext();
-        GroupResourceProcessForm groupResourceProcessForm = new GroupResourceProcessForm();
-
-        context.setProcessForm(groupResourceProcessForm);
-        InlongGroupInfo inlongGroupInfo = new InlongGroupInfo();
-        inlongGroupInfo.setInlongGroupId("1");
-        groupResourceProcessForm.setGroupInfo(inlongGroupInfo);
+        GroupResourceProcessForm groupResourceForm = new GroupResourceProcessForm();
+        context.setProcessForm(groupResourceForm);
+        InlongPulsarInfo pulsarInfo = new InlongPulsarInfo();
+        pulsarInfo.setInlongGroupId("1");
+        groupResourceForm.setGroupInfo(pulsarInfo);
 
         List<InlongGroupExtInfo> inlongGroupExtInfos = new ArrayList<>();
         InlongGroupExtInfo inlongGroupExtInfo1 = new InlongGroupExtInfo();
-        inlongGroupExtInfo1.setKeyName(InlongGroupSettings.SORT_URL);
+        inlongGroupExtInfo1.setKeyName(InlongConstants.SORT_URL);
         inlongGroupExtInfo1.setKeyValue("127.0.0.1:8085");
         inlongGroupExtInfos.add(inlongGroupExtInfo1);
 
         InlongGroupExtInfo inlongGroupExtInfo2 = new InlongGroupExtInfo();
-        inlongGroupExtInfo2.setKeyName(InlongGroupSettings.SORT_PROPERTIES);
+        inlongGroupExtInfo2.setKeyName(InlongConstants.SORT_PROPERTIES);
         ObjectMapper objectMapper = new ObjectMapper();
         Map<String, String> sortProperties = new HashMap<>(16);
         String sortStr = objectMapper.writeValueAsString(sortProperties);
@@ -58,7 +59,7 @@ public class StartupSortListenerTest {
         inlongGroupExtInfos.add(inlongGroupExtInfo2);
 
         InlongGroupExtInfo inlongGroupExtInfo5 = new InlongGroupExtInfo();
-        inlongGroupExtInfo5.setKeyName(InlongGroupSettings.DATA_FLOW);
+        inlongGroupExtInfo5.setKeyName(InlongConstants.DATAFLOW);
         inlongGroupExtInfo5.setKeyValue("{\"streamId\":{\n"
                 + "    \"id\": 1,\n"
                 + "    \"source_info\":\n"
@@ -187,7 +188,7 @@ public class StartupSortListenerTest {
                 + "    }\n"
                 + "}}");
         inlongGroupExtInfos.add(inlongGroupExtInfo5);
-        inlongGroupInfo.setExtList(inlongGroupExtInfos);
+        pulsarInfo.setExtList(inlongGroupExtInfos);
 
         StartupSortListener startupSortListener = new StartupSortListener();
         // This method temporarily fails the test, so comment it out first

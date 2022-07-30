@@ -17,8 +17,19 @@
 
 package org.apache.inlong.manager.client.api;
 
-import org.apache.inlong.manager.client.api.InlongGroupContext.InlongGroupState;
+import com.github.pagehelper.PageInfo;
+import org.apache.inlong.manager.client.api.enums.SimpleGroupStatus;
 import org.apache.inlong.manager.client.api.impl.InlongClientImpl;
+import org.apache.inlong.manager.common.pojo.cluster.BindTagRequest;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterInfo;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterNodeRequest;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterNodeResponse;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterPageRequest;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterRequest;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterTagPageRequest;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterTagRequest;
+import org.apache.inlong.manager.common.pojo.cluster.ClusterTagResponse;
+import org.apache.inlong.manager.common.pojo.group.InlongGroupInfo;
 
 import java.util.List;
 import java.util.Map;
@@ -27,16 +38,16 @@ import java.util.Map;
  * An interface to manipulate Inlong Cluster
  * <p/>
  * Example:
- * <p/>
  *
  * <pre>
  * <code>
+ *
  * ClientConfiguration configuration = ..
  * InlongClient client = InlongClient.create(${serviceUrl}, configuration);
- * InlongGroupConf groupConf = ..
- * InlongGroup group = client.createGroup(groupConf);
- * InlongStreamConf streamConf = ..
- * InlongStreamBuilder builder = group.createStream(streamConf);
+ * InlongGroupInfo groupInfo = ..
+ * InlongGroup group = client.createGroup(groupInfo);
+ * InlongStreamInfo streamInfo = ..
+ * InlongStreamBuilder builder = group.createStream(streamInfo);
  * StreamSource source = ..
  * StreamSink sink = ..
  * List StreamField fields = ..
@@ -59,13 +70,13 @@ public interface InlongClient {
     }
 
     /**
-     * Create stream group by conf
+     * Create inlong group by the given group info
      *
-     * @param groupConf the group conf
+     * @param groupInfo the group info
      * @return the inlong group
      * @throws Exception the exception
      */
-    InlongGroup forGroup(InlongGroupConf groupConf) throws Exception;
+    InlongGroup forGroup(InlongGroupInfo groupInfo) throws Exception;
 
     /**
      * List group list.
@@ -76,13 +87,13 @@ public interface InlongClient {
     List<InlongGroup> listGroup(String expr, int status, int pageNum, int pageSize) throws Exception;
 
     /**
-     * List group state
+     * List group status
      *
-     * @param groupNames
-     * @return
-     * @throws Exception
+     * @param groupIds inlong group id list
+     * @return map of inlong group status list
+     * @throws Exception the exception
      */
-    Map<String, InlongGroupState> listGroupState(List<String> groupNames) throws Exception;
+    Map<String, SimpleGroupStatus> listGroupStatus(List<String> groupIds) throws Exception;
 
     /**
      * Gets group.
@@ -93,4 +104,131 @@ public interface InlongClient {
      */
     InlongGroup getGroup(String groupName) throws Exception;
 
+    /**
+     * Save cluster tag.
+     *
+     * @param request cluster tag
+     * @return saved cluster tag id
+     */
+    Integer saveTag(ClusterTagRequest request);
+
+    /**
+     * Get cluster tag by id.
+     *
+     * @param id cluster tag id
+     * @return cluster tag info
+     */
+    ClusterTagResponse getTag(Integer id);
+
+    /**
+     * Paging query cluster tags according to conditions.
+     *
+     * @param request page request conditions
+     * @return cluster tag list
+     */
+    PageInfo<ClusterTagResponse> listTag(ClusterTagPageRequest request);
+
+    /**
+     * Update cluster tag.
+     *
+     * @param request cluster tag to be modified
+     * @return whether succeed
+     */
+    Boolean updateTag(ClusterTagRequest request);
+
+    /**
+     * Delete cluster tag.
+     *
+     * @param id cluster tag id to be deleted
+     * @return whether succeed
+     */
+    Boolean deleteTag(Integer id);
+
+    /**
+     * Save component cluster for Inlong.
+     *
+     * @param request cluster create request
+     * @return clusterIndex
+     */
+    Integer saveCluster(ClusterRequest request);
+
+    /**
+     * Get cluster info by id.
+     *
+     * @param id cluster id
+     * @return cluster info
+     */
+    ClusterInfo get(Integer id);
+
+    /**
+     * Paging query clusters according to conditions.
+     *
+     * @param request query conditions
+     * @return cluster list
+     */
+    ClusterInfo list(ClusterPageRequest request);
+
+    /**
+     * Update cluster information.
+     *
+     * @param request cluster to be modified
+     * @return whether succeed
+     */
+    Boolean update(ClusterRequest request);
+
+    /**
+     * Bind or unbind cluster tag for clusters.
+     *
+     * @param request cluster to be modified
+     * @return whether succeed
+     */
+    Boolean bindTag(BindTagRequest request);
+
+    /**
+     * Delete cluster information.
+     *
+     * @param id cluster id to be deleted
+     * @return whether succeed
+     */
+    Boolean delete(Integer id);
+
+    /**
+     * Save cluster node info.
+     *
+     * @param request cluster info
+     * @return id after saving
+     */
+    Integer saveNode(ClusterNodeRequest request);
+
+    /**
+     * Get cluster node info by id.
+     *
+     * @param id cluster id
+     * @return cluster info
+     */
+    ClusterNodeResponse getNode(Integer id);
+
+    /**
+     * Paging query cluster nodes according to conditions.
+     *
+     * @param request page request conditions
+     * @return cluster node list
+     */
+    PageInfo<ClusterNodeResponse> listNode(ClusterPageRequest request);
+
+    /**
+     * Update cluster node.
+     *
+     * @param request cluster node to be modified
+     * @return whether succeed
+     */
+    Boolean updateNode(ClusterNodeRequest request);
+
+    /**
+     * Delete cluster node.
+     *
+     * @param id cluster node id to be deleted
+     * @return whether succeed
+     */
+    Boolean deleteNode(Integer id);
 }
