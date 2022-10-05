@@ -199,7 +199,7 @@
         <dom4j.version>2.1.3</dom4j.version>
 
         <zookeeper.version>3.6.3</zookeeper.version>
-        <pulsar.version>2.8.1</pulsar.version>
+        <pulsar.version>2.8.4</pulsar.version>
         <pulsar.testcontainers.version>1.15.3</pulsar.testcontainers.version>
         <kafka.version>2.4.1</kafka.version>
         <iceberg.version>0.13.2</iceberg.version>
