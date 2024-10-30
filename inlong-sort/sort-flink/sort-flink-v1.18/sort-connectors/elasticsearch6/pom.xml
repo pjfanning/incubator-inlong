@@ -30,7 +30,7 @@
 
     <properties>
         <inlong.root.dir>${project.parent.parent.parent.parent.parent.basedir}</inlong.root.dir>
-        <elasticsearch.version>6.8.17</elasticsearch.version>
+        <elasticsearch.version>7.17.23</elasticsearch.version>
         <elasticsearch.connector.version>3.0.1-1.17</elasticsearch.connector.version>
     </properties>
 
