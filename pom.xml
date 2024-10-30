@@ -121,7 +121,7 @@
         <swagger.annotations.version>1.6.2</swagger.annotations.version>
         <knife4j.version>3.0.3</knife4j.version>
 
-        <commons.io.version>2.11.0</commons.io.version>
+        <commons.io.version>2.14.0</commons.io.version>
         <commons.cli.version>1.4</commons.cli.version>
         <commons.dbutils.version>1.7</commons.dbutils.version>
         <commons.codec.version>1.15</commons.codec.version>
