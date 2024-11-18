@@ -31,7 +31,7 @@
 
     <properties>
         <inlong.root.dir>${project.parent.parent.basedir}</inlong.root.dir>
-        <debezium.version>1.8.0.Final</debezium.version>
+        <debezium.version>2.3.0.Final</debezium.version>
         <ojdbc.version>19.3.0.0</ojdbc.version>
         <darwinsys.version>1.5.1</darwinsys.version>
     </properties>
