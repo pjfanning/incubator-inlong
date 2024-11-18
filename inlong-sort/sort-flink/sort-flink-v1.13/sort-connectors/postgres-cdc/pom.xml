@@ -29,7 +29,7 @@
     <name>Apache InLong - Sort-connector-postgres-cdc</name>
 
     <properties>
-        <postgress.debezium.version>1.6.4.Final</postgress.debezium.version>
+        <postgress.debezium.version>2.3.0.Final</postgress.debezium.version>
         <inlong.root.dir>${project.parent.parent.parent.parent.parent.basedir}</inlong.root.dir>
     </properties>
 
